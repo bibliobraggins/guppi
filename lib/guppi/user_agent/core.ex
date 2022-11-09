@@ -3,6 +3,7 @@ defmodule Guppi.Core do
 
   require Logger
 
+  alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
   # alias Sippet.Message.StatusLine, as: StatusLine
   # alias Sippet.Transactions, as: Transactions
@@ -18,13 +19,13 @@ defmodule Guppi.Core do
     the respective Sippet :name and Transport :name fields.
   """
 
-  def receive_request(%Sippet.Message{start_line: %RequestLine{}} = incoming_request, nil) do
+  def receive_request(%Message{start_line: %RequestLine{}} = ack, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
-    Logger.debug("Got ACK :: #{inspect(incoming_request)}")
+    GenServer.cast(route_agent(ack.headers.to), {ack})
   end
 
-  def receive_request(%Sippet.Message{} = incoming_request, server_key) do
-    GenServer.cast(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request, server_key})
+  def receive_request(%Message{} = incoming_request, server_key) do
+    GenServer.call(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request, server_key})
   end
 
   def receive_response(incoming_response, _client_key) do

@@ -4,6 +4,7 @@ defmodule Guppi.Agent do
   require Logger
 
   alias Sippet.Message, as: Message
+  alias Sippet.Message.RequestLine, as: RequestLine
 
   @moduledoc """
 
@@ -55,20 +56,21 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:invite, request, server_key}, agent) do
+  def handle_cast({%Message{start_line: %RequestLine{}}} = {ack}, agent) do
+    Logger.debug("#{inspect(ack)}")
+
+    {:noreply, agent}
+  end
+
+  @impl true
+  def handle_call({:invite, request, server_key}, _caller, agent) do
     Logger.debug("Received request: #{inspect(request.start_line)}")
 
     response = Message.to_response(request, 200)
 
-    Sippet.send(agent.transport, response)
-
-    receive do
-      {:on_response, _, response} ->
-        Logger.debug("#{inspect(response)}")
-    end
-
     {
-      :noreply,
+      :reply,
+      Sippet.send(agent.transport, response),
       %{
         account: agent.account,
         transport: agent.transport,
@@ -96,21 +98,23 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_call({:bye, _request, _key}, _caller, agent) do
+
+
     {:reply, :not_implemented, agent}
   end
 
   @impl true
-  def handle_call(:staagents, _caller, agent) do
-    {:reply, agent, agent}
-  end
-
-  @impl true
   def handle_call(:stop, _caller, agent) do
-    # TODO
+    # _caller TODO
     case on_call?(agent) do
       true -> {:reply, {:error, :on_call, agent.account.uri.authority}}
       false -> {:stop, :normal}
     end
+  end
+
+  @impl true
+  def handle_call(:status, _caller, agent) do
+    {:reply, agent, agent}
   end
 
   # TODO

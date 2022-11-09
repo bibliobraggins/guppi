@@ -43,8 +43,9 @@ defmodule Guppi do
       Supervisor.which_children(__MODULE__),
       [],
       fn {{port, user}, _pid, _type, _module} ->
-        {String.to_existing_atom(port), String.to_existing_atom(user)}
+        {String.to_existing_atom(port), user}
       end
     )
   end
+
 end
