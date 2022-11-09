@@ -2,20 +2,37 @@
 
 **TODO: Add description**
 
+Guppi is intended as an RFC 3261 && 3263 compliant "phone".
+
+example configuration:
+```
+{
+  "accounts":
+    [
+      {
+        "register": true,
+        "codecs": "pcmu",
+        "rtp_range": [20000,40000],
+        "transport": "udp",
+        "uri":"sip:odin@0.0.0.0:5060"
+      },
+      {
+        "register": false,
+        "codecs": "pcmu",
+        "rtp_range": [20000,40000],
+        "transport": "udp",
+        "uri":"sip:leviathan@0.0.0.0:5061"
+      }
+    ]
+}
+```
+use 0.0.0.0 when you do not care what socket to listen on.
+
+Each Account is spawned in a Guppi.Agent, and is supervised by Guppi itself. 
+
+To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
+
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `guppi` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:guppi, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/guppi>.
+# TODO: Determine hosting solutions when a viable 0.1.0 can be released.
 
