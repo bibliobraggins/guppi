@@ -1,0 +1,19 @@
+{
+  "accounts":
+    [
+      {
+        "register": true,
+        "codecs": "pcmu",
+        "rtp_range": [20000,40000],
+        "transport": "udp",
+        "uri":"sip:odin@0.0.0.0:5060"
+      },
+      {
+        "register": false,
+        "codecs": "pcmu",
+        "rtp_range": [20000,40000],
+        "transport": "udp",
+        "uri":"sip:leviathan@0.0.0.0:5061"
+      }
+    ]
+}
