@@ -5,7 +5,8 @@ defmodule Guppi.Agent do
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
-  alias Sippet.Message.StatusLine, as: StatusLine
+  #alias Sippet.Message.StatusLine, as: StatusLine
+  alias Sippet.DigestAuth, as: DigestAuth
 
   @moduledoc """
 
@@ -42,7 +43,7 @@ defmodule Guppi.Agent do
             name: agent_name,
             address: Guppi.Helpers.local_ip!(),
             port: account.uri.port,
-            proxy: proxy,
+            proxy: proxy
           )
       end
 
@@ -67,7 +68,7 @@ defmodule Guppi.Agent do
         sippet:     sippet,
         transport:  agent_name,
         transactions: [],
-        messages: {},
+        messages: [],
       }
     )
   end
@@ -90,33 +91,12 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_continue(:register, agent) do
-
-    cseq = case Map.has_key?(agent.account, :cseq) do
-      true ->
-        agent.account.cseq+1
-      false ->
-        1
-    end
     # here we just match on the register functions output.
-    request = %Message{
-      start_line: RequestLine.new(:register, "#{agent.account.uri.scheme}:#{agent.account.realm}"),
-      headers: %{
-        via: [
-          {{2, 0}, :udp, {"#{agent.account.uri.host}", agent.account.uri.port}, %{"branch" => Message.create_branch()}}
-        ],
-        from: {"", Sippet.URI.parse!("#{agent.account.uri.scheme}:#{agent.account.uri.userinfo}@#{agent.account.realm}"), %{"tag" => Message.create_tag()}},
-        to: {"", Sippet.URI.parse!("#{agent.account.uri.scheme}:#{agent.account.uri.userinfo}@#{agent.account.realm}"), %{}},
-        contact: {"", agent.account.uri, %{}},
-        expires: 3600,
-        max_forwards: 70,
-        cseq: {cseq, :register},
-        user_agent: "Guppi/0.1.0",
-        call_id: Message.create_call_id()
-      }
-    }
-    Sippet.send(agent.transport, request)
+    registration = Guppi.Register.make_register(agent)
 
-    {:noreply, agent}
+    Sippet.send(agent.transport, registration)
+
+    {:noreply, Map.replace(agent, :messages, List.insert_at(agent.messages, -1, registration))}
   end
 
   @impl true
@@ -124,6 +104,35 @@ defmodule Guppi.Agent do
     #Logger.debug("#{inspect(ack.headers)}")
 
     {:noreply, agent}
+  end
+
+  @impl true
+  def handle_call({:response, _request, _key}, _caller, agent) do
+    Logger.warn("Unimplemented SIP method Warning: #{inspect(agent.transport)} received a REFER")
+    {:reply, :not_implemented, agent}
+  end
+
+  @impl true
+  def handle_call({:authenticate, response, _key}, _caller, agent) do
+    {:ok, new_req} = DigestAuth.make_request(List.first(agent.messages), response, fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end, [])
+
+    new_req =
+      new_req
+      |> Message.update_header(:cseq, fn {seq, method} ->
+        {seq + 1, method}
+      end)
+      |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+        {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+      end)
+      |> Message.update_header(:from, fn {name, uri, params} ->
+        {name, uri, %{params | "tag" => Message.create_tag()}}
+      end)
+
+    Sippet.send(agent.transport, new_req)
+    {
+      :noreply,
+      Map.replace(agent, :state, :idle)
+    }
   end
 
   @impl true
@@ -183,8 +192,13 @@ defmodule Guppi.Agent do
   # TODO
   defp on_call?(_agent), do: false || true
 
-  defp user(account) do
-    {:ok, account.sip_user, account.sip_password}
+  def authenticate(account) do
+    {username, password} =
+      with {:ok, user} <- Map.fetch(account, :sip_user),
+           {:ok, password} <- Map.fetch(account, :sip_password) do
+            {user, password}
+    end
+    {:ok, username, password}
   end
 
 end

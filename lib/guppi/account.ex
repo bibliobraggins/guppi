@@ -22,6 +22,8 @@ defmodule Guppi.Account do
     :primary_dns,
     :allow,
     :secondary_dns,
+    :sip_user,
+    :sip_password,
     :sip_server_1,
     :sip_server_2,
     :outbound_proxy,

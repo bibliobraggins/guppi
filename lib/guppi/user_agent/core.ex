@@ -3,9 +3,10 @@ defmodule Guppi.Core do
 
   require Logger
 
+  alias String.Chars.Sippet.Message.StatusLine
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
-  # alias Sippet.Message.StatusLine, as: StatusLine
+  alias Sippet.Message.StatusLine, as: StatusLine
   # alias Sippet.Transactions, as: Transactions
 
   @moduledoc """
@@ -28,8 +29,12 @@ defmodule Guppi.Core do
     GenServer.call(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request, server_key})
   end
 
+  def receive_response(%Message{start_line: %StatusLine{status_code: status_code}} = incoming_response, client_key) when status_code in [401,407] do
+    GenServer.call(route_agent(incoming_response.headers.to), {:authenticate, incoming_response, client_key})
+  end
+
   def receive_response(incoming_response, client_key) do
-    GenServer.call(route_agent(incoming_response.headers.to), {incoming_response.start_line, incoming_response, client_key})
+    GenServer.call(route_agent(incoming_response.headers.to), {:response, incoming_response, client_key})
   end
 
   def receive_error(error_reason, _client_or_server_key) do
