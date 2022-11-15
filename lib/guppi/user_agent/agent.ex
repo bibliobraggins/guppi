@@ -107,12 +107,6 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_call({:response, _request, _key}, _caller, agent) do
-    Logger.warn("Unimplemented SIP method Warning: #{inspect(agent.transport)} received a REFER")
-    {:reply, :not_implemented, agent}
-  end
-
-  @impl true
   def handle_call({:authenticate, response, _key}, _caller, agent) do
     {:ok, new_req} = DigestAuth.make_request(List.first(agent.messages), response, fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end, [])
 
@@ -129,6 +123,7 @@ defmodule Guppi.Agent do
       end)
 
     Sippet.send(agent.transport, new_req)
+
     {
       :noreply,
       Map.replace(agent, :state, :idle)
@@ -152,9 +147,21 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_call({:refer, _request, _key}, _caller, agent) do
-    Logger.warn("Unimplemented SIP method Warning: #{inspect(agent.transport)} received a REFER")
-    {:reply, :not_implemented, agent}
+  def handle_call({:notify, request, _key}, _caller, agent) do
+    Logger.debug("#{inspect(request)} received a NOTIFY")
+
+    Sippet.send(agent.transport, Message.to_response(request, 200))
+    {:noreply, agent}
+  end
+
+  @impl true
+  def handle_call({:refer, request, _key}, _caller, agent) do
+    Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
+    {
+      :reply,
+      Sippet.send(agent.transport, Message.build_response(200)),
+      agent
+    }
   end
 
   @impl true
@@ -168,6 +175,14 @@ defmodule Guppi.Agent do
   @impl true
   def handle_call({:cancel, _request, _key}, _caller, agent) do
     {:reply, :not_implemented, agent}
+  end
+
+  @impl true
+  def handle_call({:response, _response, _key}, _caller, agent) do
+    {
+      :noreply,
+      agent
+    }
   end
 
   @impl true

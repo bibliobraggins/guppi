@@ -50,8 +50,4 @@ defmodule Guppi.Core do
     end
   end
 
-  @doc """
-    there is a problem here to programatically solve. I believe I may have been correct that Guppi needs a Registry of users
-
-  """
 end
