@@ -24,6 +24,7 @@ defmodule Guppi.Account do
     :secondary_dns,
     :sip_server_1,
     :sip_server_2,
+    :outbound_proxy,
     :codecs,
     :certificates
   ]

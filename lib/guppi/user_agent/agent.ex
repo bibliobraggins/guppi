@@ -5,6 +5,7 @@ defmodule Guppi.Agent do
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
+  alias Sippet.Message.StatusLine, as: StatusLine
 
   @moduledoc """
 
@@ -15,49 +16,112 @@ defmodule Guppi.Agent do
                         /     \
 
   """
-
   def start_link(account) do
-    agent_name = String.to_atom(account.uri.authority)
+    agent_name =  account.uri.userinfo |> String.to_atom()
 
+    proxy =
+      with true <- Map.has_key?(account, :outbound_proxy),
+           true <- Map.has_key?(account.outbound_proxy, :dns) do
+            case account.outbound_proxy.dns do
+              "A" ->
+              {account.outbound_proxy.host, account.outbound_proxy.port}
+              "SRV" ->
+                raise ArgumentError, "Cannot use SRV records at this time"
+              _ -> nil
+            end
+      end
+
+    # start sippet instance based on sip user data
     {:ok, sippet} = Sippet.start_link(name: agent_name)
 
+    # build a
     {:ok, _transport_pid} =
       case account.transport do
         "udp" ->
           Guppi.Transports.UDP.start_link(
             name: agent_name,
             address: Guppi.Helpers.local_ip!(),
-            port: account.uri.port
+            port: account.uri.port,
+            proxy: proxy,
           )
       end
 
+    # register the core process - everything is one per "user"
     Sippet.register_core(agent_name, Guppi.Core)
 
+    # silly mechanism to catch next agent state
+    init_state =
+      case account.register do
+        true ->
+          :register
+        false ->
+          :init
+      end
+
+    # run the agent GenServer
     GenServer.start_link(
       __MODULE__,
       %{
         account:    account,
-        state:      :init,
+        state:      init_state,
         sippet:     sippet,
         transport:  agent_name,
         transactions: [],
-      },
-      name: account.uri.port |> to_charlist() |> List.to_atom()
+        messages: {},
+      }
     )
   end
 
   @impl true
   def init(agent) do
-    Registry.start_link(keys: :duplicate, name: agent.transport)
-
-    Logger.debug("Started #{inspect(agent.transport)}")
-
-    {:ok, Map.replace(agent, :state, :idle)}
+    # we immedaitely register the "valid agent" to Guppi.Registry
+    case Guppi.register(agent.account) do
+      {:ok, _} -> :ok
+      error -> Logger.warn inspect error
+    end
+    # on initialization, should we immediately register or are we clear to transmit?
+    case agent.state do
+      :register ->
+        {:ok, agent, {:continue, :register}}
+      _ ->
+        {:ok, Map.replace(agent, :state, :idle)}
+    end
   end
 
   @impl true
-  def handle_cast({%Message{start_line: %RequestLine{}}} = {ack}, agent) do
-    Logger.debug("#{inspect(ack)}")
+  def handle_continue(:register, agent) do
+
+    cseq = case Map.has_key?(agent.account, :cseq) do
+      true ->
+        agent.account.cseq+1
+      false ->
+        1
+    end
+    # here we just match on the register functions output.
+    request = %Message{
+      start_line: RequestLine.new(:register, "#{agent.account.uri.scheme}:#{agent.account.realm}"),
+      headers: %{
+        via: [
+          {{2, 0}, :udp, {"#{agent.account.uri.host}", agent.account.uri.port}, %{"branch" => Message.create_branch()}}
+        ],
+        from: {"", Sippet.URI.parse!("#{agent.account.uri.scheme}:#{agent.account.uri.userinfo}@#{agent.account.realm}"), %{"tag" => Message.create_tag()}},
+        to: {"", Sippet.URI.parse!("#{agent.account.uri.scheme}:#{agent.account.uri.userinfo}@#{agent.account.realm}"), %{}},
+        contact: {"", agent.account.uri, %{}},
+        expires: 3600,
+        max_forwards: 70,
+        cseq: {cseq, :register},
+        user_agent: "Guppi/0.1.0",
+        call_id: Message.create_call_id()
+      }
+    }
+    Sippet.send(agent.transport, request)
+
+    {:noreply, agent}
+  end
+
+  @impl true
+  def handle_cast({%Message{start_line: %RequestLine{}}} = {_ack}, agent) do
+    #Logger.debug("#{inspect(ack.headers)}")
 
     {:noreply, agent}
   end
@@ -66,17 +130,15 @@ defmodule Guppi.Agent do
   def handle_call({:invite, request, server_key}, _caller, agent) do
     Logger.debug("Received request: #{inspect(request.start_line)}")
 
-    response = Message.to_response(request, 200)
+    response = %Message{} = Message.to_response(request, 200)
+    |> Message.put_header(:content_type, "application/sdp")
+
+    Logger.debug(inspect(response))
 
     {
       :reply,
       Sippet.send(agent.transport, response),
-      %{
-        account: agent.account,
-        transport: agent.transport,
-        sippet: agent.sippet,
-        transactions: [ server_key | agent.transactions ],
-      }
+      Map.replace(agent, :transactions, [server_key | agent.transactions])
     }
   end
 
@@ -87,8 +149,11 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_call({:options, _request, _key}, _caller, agent) do
-    {:reply, :not_implemented, agent}
+  def handle_call({:options, request, _key}, _caller, agent) do
+    response = Message.to_response(request, 200)
+    |> Message.put_header(:content_type, "application/sdp")
+
+    {:reply, Sippet.send(agent.transport, response), agent}
   end
 
   @impl true
@@ -98,18 +163,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_call({:bye, _request, _key}, _caller, agent) do
-
-
     {:reply, :not_implemented, agent}
-  end
-
-  @impl true
-  def handle_call(:stop, _caller, agent) do
-    # _caller TODO
-    case on_call?(agent) do
-      true -> {:reply, {:error, :on_call, agent.account.uri.authority}}
-      false -> {:stop, :normal}
-    end
   end
 
   @impl true
@@ -117,7 +171,20 @@ defmodule Guppi.Agent do
     {:reply, agent, agent}
   end
 
+  @impl true
+  def handle_call(:stop, _caller, agent) do
+    # TODO
+    case on_call?(agent) do
+      true -> {:reply, {:error, :on_call, agent.account.uri.authority}}
+      false -> {:stop, :normal}
+    end
+  end
+
   # TODO
   defp on_call?(_agent), do: false || true
+
+  defp user(account) do
+    {:ok, account.sip_user, account.sip_password}
+  end
 
 end

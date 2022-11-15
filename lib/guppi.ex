@@ -8,7 +8,11 @@ defmodule Guppi do
 
   def start, do: start [], []
 
-  def start(_type,_args), do: start_link([], [])
+  def start(_type,_args) do
+    Registry.start_link(keys: :unique, name: Guppi.Registry)
+
+    start_link([], [])
+  end
 
   def start_link(_type, _args) do
     children = Enum.into(
@@ -25,10 +29,6 @@ defmodule Guppi do
   end
 
   def stop do
-    Enum.each(agents(), fn name ->
-      Supervisor.terminate_child(__MODULE__, name)
-    end)
-
     Supervisor.stop(__MODULE__, :normal)
   end
 
@@ -38,14 +38,10 @@ defmodule Guppi do
     start()
   end
 
-  def agents do
-    Enum.into(
-      Supervisor.which_children(__MODULE__),
-      [],
-      fn {{port, user}, _pid, _type, _module} ->
-        {String.to_existing_atom(port), user}
-      end
-    )
+  def register(account) do
+    Registry.register(Guppi.Registry, account.uri.port, String.to_atom(account.id))
   end
+
+  def count, do: Registry.count(Guppi.Registry)
 
 end

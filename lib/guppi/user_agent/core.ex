@@ -28,8 +28,8 @@ defmodule Guppi.Core do
     GenServer.call(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request, server_key})
   end
 
-  def receive_response(incoming_response, _client_key) do
-    Logger.debug("Got Response: #{inspect(incoming_response)}")
+  def receive_response(incoming_response, client_key) do
+    GenServer.call(route_agent(incoming_response.headers.to), {incoming_response.start_line, incoming_response, client_key})
   end
 
   def receive_error(error_reason, _client_or_server_key) do
@@ -38,7 +38,15 @@ defmodule Guppi.Core do
   end
 
   defp route_agent({_display_name, uri, _}) do
-    to_string(uri.port)
-    |> String.to_atom()
+    case Registry.lookup(Guppi.Registry, uri.port) do
+      [{pid, _agent}] when is_pid(pid) ->
+        pid
+      # _[] -> [] # shouldn't even be possible tbh. refactor maybe?
+    end
   end
+
+  @doc """
+    there is a problem here to programatically solve. I believe I may have been correct that Guppi needs a Registry of users
+
+  """
 end

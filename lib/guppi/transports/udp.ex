@@ -18,7 +18,9 @@ defmodule Guppi.Transports.UDP do
 
   defstruct socket: nil,
             family: :inet,
-            sippet: nil
+            sippet: nil,
+            proxy_host: nil,
+            proxy_port: nil
 
   @doc """
   Starts the UDP transport.
@@ -76,18 +78,23 @@ defmodule Guppi.Transports.UDP do
                 ":address contains an invalid IP or DNS name, got: #{inspect(reason)}"
       end
 
-    GenServer.start_link(__MODULE__, {name, ip, port, family})
+    case Keyword.fetch(options, :proxy) do
+      {:ok, {proxy_host, proxy_port}} ->
+        GenServer.start_link(__MODULE__, {name, ip, port, family, proxy_host, proxy_port})
+      _ ->
+        GenServer.start_link(__MODULE__, {name, ip, port, family})
+      end
   end
 
   @impl true
-  def init({name, ip, port, family}) do
+  def init({name, ip, port, family, proxy_host, proxy_port}) do
     Sippet.register_transport(name, :udp, false)
 
-    {:ok, nil, {:continue, {name, ip, port, family}}}
+    {:ok, nil, {:continue, {name, ip, port, family, proxy_host, proxy_port}}}
   end
 
   @impl true
-  def handle_continue({name, ip, port, family}, nil) do
+  def handle_continue({name, ip, port, family, proxy_host, proxy_port}, nil) do
     case :gen_udp.open(port, [:binary, {:active, true}, {:ip, ip}, family]) do
       {:ok, socket} ->
         Logger.debug(
@@ -98,7 +105,9 @@ defmodule Guppi.Transports.UDP do
         state = %__MODULE__{
           socket: socket,
           family: family,
-          sippet: name
+          sippet: name,
+          proxy_host: proxy_host,
+          proxy_port: proxy_port
         }
 
         {:noreply, state}
@@ -120,6 +129,39 @@ defmodule Guppi.Transports.UDP do
     Sippet.Router.handle_transport_message(sippet, packet, {:udp, from_ip, from_port})
 
     {:noreply, state}
+  end
+
+  @doc """
+    If an outbound proxy is specified on an account, the account Agent is will resolve it
+    before handing it over to this transport. this allows us to terminate to hosts that
+    differ from the one declared in our start_line, which is actually a pretty common scenario for Sip User Endpoints.
+    In the future, this implementation should be able to handle SRV and NAPTR based proxy hosts as well.
+  """
+  #@impl true
+  def handle_call(
+        {:send_message, message, _to_host, _to_port, key},
+        _from,
+        state
+      ) do
+    Logger.debug([
+      "sending message to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
+      ", #{inspect(key)}"
+    ])
+
+    with {:ok, to_ip} <- resolve_name(state.proxy_host, :inet),
+         iodata <- Message.to_iodata(message),
+         :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, iodata) do
+      :ok
+    else
+      {:error, reason} ->
+        Logger.warn("udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}")
+
+        if key != nil do
+          Sippet.Router.receive_transport_error(state.sippet, key, reason)
+        end
+    end
+
+    {:reply, :ok, state}
   end
 
   @impl true
