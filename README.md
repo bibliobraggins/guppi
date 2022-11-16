@@ -14,21 +14,19 @@ example configuration:
         "codecs": "pcmu",
         "rtp_range": [20000,40000],
         "transport": "udp",
-        "uri":"sip:odin@0.0.0.0:5060"
+        "uri":"sip:userinfo@host:port"
       },
-      {
-        "register": false,
-        "codecs": "pcmu",
-        "rtp_range": [20000,40000],
-        "transport": "udp",
-        "uri":"sip:leviathan@0.0.0.0:5061"
-      }
     ]
 }
 ```
 use 0.0.0.0 when you do not care what socket to listen on.
 
-Each Account is spawned in a Guppi.Agent, and is supervised by Guppi itself. 
+Each Account is spawned in a Guppi.Agent, and is supervised by Guppi itself.
+
+```
+iex(1)> Registry.lookup(Guppi.Registry, local_port)
+{#PID<XXX>, :uri}
+```
 
 To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
 
