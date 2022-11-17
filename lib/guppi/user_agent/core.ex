@@ -20,17 +20,21 @@ defmodule Guppi.Core do
     the respective Sippet :name and Transport :name fields.
   """
 
-  def receive_request(%Message{start_line: %RequestLine{}} = ack, nil) do
+  def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, _nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
-    GenServer.cast(route_agent(ack.headers.to), {ack})
+    GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request})
   end
 
   def receive_request(%Message{} = incoming_request, server_key) do
-    GenServer.call(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request, server_key})
+    GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request.start_line.method, incoming_request, server_key})
   end
 
   def receive_response(%Message{start_line: %StatusLine{status_code: status_code}} = incoming_response, client_key) when status_code in [401,407] do
     GenServer.call(route_agent(incoming_response.headers.to), {:authenticate, incoming_response, client_key})
+  end
+
+  def receive_response(%Message{start_line: %StatusLine{status_code: _status_code}} = incoming_response, client_key) do
+    GenServer.call(route_agent(incoming_response.headers.to), {:response, incoming_response, client_key})
   end
 
   def receive_response(incoming_response, client_key) do
@@ -42,11 +46,13 @@ defmodule Guppi.Core do
     # route_agent((UA/TU process), error_reason, key)
   end
 
-  defp route_agent({_display_name, uri, _}) do
+  defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)
+
+  defp route_agent(%Sippet.URI{} = uri) do
     case Registry.lookup(Guppi.Registry, uri.port) do
       [{pid, _agent}] when is_pid(pid) ->
         pid
-      # _[] -> [] # shouldn't even be possible tbh. refactor maybe?
+      # [] -> [] # shouldn't even be possible tbh. refactor maybe?
     end
   end
 

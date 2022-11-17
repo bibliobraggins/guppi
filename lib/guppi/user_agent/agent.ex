@@ -5,7 +5,7 @@ defmodule Guppi.Agent do
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
-  #alias Sippet.Message.StatusLine, as: StatusLine
+  alias Sippet.Message.StatusLine, as: StatusLine
   alias Sippet.DigestAuth, as: DigestAuth
 
   @moduledoc """
@@ -96,19 +96,18 @@ defmodule Guppi.Agent do
 
     Sippet.send(agent.transport, registration)
 
-    {:noreply, Map.replace(agent, :messages, List.insert_at(agent.messages, -1, registration))}
+    {:noreply, Map.replace(agent, :messages, [registration])}
   end
 
   @impl true
-  def handle_cast({%Message{start_line: %RequestLine{}}} = {_ack}, agent) do
-    #Logger.debug("#{inspect(ack.headers)}")
-
-    {:noreply, agent}
+  def handle_call(%Message{start_line: %RequestLine{} = _request}, _caller, agent) do
+    {:noeply, agent}
   end
 
   @impl true
-  def handle_call({:authenticate, response, _key}, _caller, agent) do
-    {:ok, new_req} = DigestAuth.make_request(List.first(agent.messages), response, fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end, [])
+  def handle_call({:authenticate, response, key}, _caller, agent) do
+    {:ok, new_req} = DigestAuth.make_request(List.first(agent.messages),
+        response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, [])
 
     new_req =
       new_req
@@ -124,10 +123,7 @@ defmodule Guppi.Agent do
 
     Sippet.send(agent.transport, new_req)
 
-    {
-      :noreply,
-      Map.replace(agent, :state, :idle)
-    }
+    {:reply, :ok, Map.replace(agent, :state, :idle)}
   end
 
   @impl true
@@ -150,12 +146,11 @@ defmodule Guppi.Agent do
   def handle_call({:notify, request, _key}, _caller, agent) do
     Logger.debug("#{inspect(request)} received a NOTIFY")
 
-    Sippet.send(agent.transport, Message.to_response(request, 200))
-    {:noreply, agent}
+    {:noreply,agent}
   end
 
   @impl true
-  def handle_call({:refer, request, _key}, _caller, agent) do
+  def handle_call({:refer, %Message{} = request, _key}, _caller, agent) do
     Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
     {
       :reply,
@@ -178,11 +173,13 @@ defmodule Guppi.Agent do
   end
 
   @impl true
+  def handle_call({:ok, _response}, _caller, agent) do
+    {:noreply,agent}
+  end
+
+  @impl true
   def handle_call({:response, _response, _key}, _caller, agent) do
-    {
-      :noreply,
-      agent
-    }
+    {:noreply,agent}
   end
 
   @impl true
@@ -206,14 +203,5 @@ defmodule Guppi.Agent do
 
   # TODO
   defp on_call?(_agent), do: false || true
-
-  def authenticate(account) do
-    {username, password} =
-      with {:ok, user} <- Map.fetch(account, :sip_user),
-           {:ok, password} <- Map.fetch(account, :sip_password) do
-            {user, password}
-    end
-    {:ok, username, password}
-  end
 
 end
