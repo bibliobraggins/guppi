@@ -1,3 +1,5 @@
+configuration.json
+
 # The directory Mix will write compiled artifacts to.
 _build/
 
@@ -31,4 +33,3 @@ resources
 
 *.lock
 
-./configuration.json
