@@ -22,10 +22,12 @@ defmodule Guppi.Core do
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, _nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
+    Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
     GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request})
   end
 
   def receive_request(%Message{} = incoming_request, server_key) do
+    Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
     GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request.start_line.method, incoming_request, server_key})
   end
 

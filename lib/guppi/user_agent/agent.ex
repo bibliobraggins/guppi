@@ -146,7 +146,7 @@ defmodule Guppi.Agent do
   def handle_call({:notify, request, _key}, _caller, agent) do
     Logger.debug("#{inspect(request)} received a NOTIFY")
 
-    {:noreply,agent}
+    {:reply, :ok, agent}
   end
 
   @impl true
