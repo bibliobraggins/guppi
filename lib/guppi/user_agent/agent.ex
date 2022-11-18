@@ -82,50 +82,50 @@ defmodule Guppi.Agent do
     end
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
-      :register ->
-        {:ok, agent, {:continue, :register}}
-      _ ->
-        {:ok, Map.replace(agent, :state, :idle)}
+      :register -> GenServer.cast(self(), :register)
     end
+
+    {:ok, Map.replace(agent, :state, :idle)}
   end
 
   @impl true
-  def handle_continue(:register, agent) do
-    # here we just match on the register functions output.
+  def handle_cast(_register, agent) do
     registration = Guppi.Register.make_register(agent)
 
     Sippet.send(agent.transport, registration)
+    receive do
+      {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response} when status_code in [401,407] ->
+        {:ok, new_req} =
+          DigestAuth.make_request(
+          registration,
+          response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, []
+        )
 
-    next_state =
-      receive do
-        {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response} when status_code in [401,407] ->
-          {:ok, new_req} =
-            DigestAuth.make_request(
-            registration,
-            response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, []
-          )
+      new_req =
+        new_req
+        |> Message.update_header(:cseq, fn {seq, method} ->
+          {seq + 1, method}
+        end)
+        |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+          {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+        end)
+        |> Message.update_header(:from, fn {name, uri, params} ->
+          {name, uri, %{params | "tag" => Message.create_tag()}}
+        end)
 
-        new_req =
-          new_req
-          |> Message.update_header(:cseq, fn {seq, method} ->
-            {seq + 1, method}
-          end)
-          |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
-            {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
-          end)
-          |> Message.update_header(:from, fn {name, uri, params} ->
-            {name, uri, %{params | "tag" => Message.create_tag()}}
-          end)
+        Sippet.send(agent.transport, new_req)
 
-          Sippet.send(agent.transport, new_req)
-          Map.replace(agent, :state, :idle)
+      {:error, error} ->
+        Logger.critical(inspect(error))
+        {:error, error}
+    end
 
-        {:error, error} ->
-          Logger.critical(inspect(error))
-          {:continue, :register}
-      end
+    Task.async(fn ->
+      Process.sleep(60000)
+      GenServer.cast(agent.transport, :register)
+    end)
 
-    {:noreply, next_state}
+    {:noreply, agent}
   end
 
   @impl true
