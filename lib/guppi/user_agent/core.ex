@@ -20,19 +20,19 @@ defmodule Guppi.Core do
     the respective Sippet :name and Transport :name fields.
   """
 
-  def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, _nil) do
+  def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
-    GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request})
+    :ok
   end
 
-  def receive_request(%Message{} = incoming_request, server_key) do
-    Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
+  def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
     GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request.start_line.method, incoming_request, server_key})
   end
 
-  def receive_response(%Message{start_line: %StatusLine{status_code: status_code}} = incoming_response, client_key) when status_code in [401,407] do
-    GenServer.call(route_agent(incoming_response.headers.to), {:authenticate, incoming_response, client_key})
+  def receive_response(%Message{start_line: %StatusLine{status_code: status_code}} = incoming_response, _client_key) when status_code in [401,407] do
+    send(route_agent(incoming_response.headers.to), {:authenticate, incoming_response})
+    :ok
   end
 
   def receive_response(%Message{start_line: %StatusLine{status_code: _status_code}} = incoming_response, client_key) do
@@ -52,7 +52,7 @@ defmodule Guppi.Core do
 
   defp route_agent(%Sippet.URI{} = uri) do
     case Registry.lookup(Guppi.Registry, uri.port) do
-      [{pid, _agent}] when is_pid(pid) ->
+      [{pid, agent}] when is_pid(pid) ->
         pid
       # [] -> [] # shouldn't even be possible tbh. refactor maybe?
     end

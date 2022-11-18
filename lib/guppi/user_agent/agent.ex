@@ -96,34 +96,41 @@ defmodule Guppi.Agent do
 
     Sippet.send(agent.transport, registration)
 
-    {:noreply, Map.replace(agent, :messages, [registration])}
+    next_state =
+      receive do
+        {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response} when status_code in [401,407] ->
+          {:ok, new_req} =
+            DigestAuth.make_request(
+            registration,
+            response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, []
+          )
+
+        new_req =
+          new_req
+          |> Message.update_header(:cseq, fn {seq, method} ->
+            {seq + 1, method}
+          end)
+          |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+            {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+          end)
+          |> Message.update_header(:from, fn {name, uri, params} ->
+            {name, uri, %{params | "tag" => Message.create_tag()}}
+          end)
+
+          Sippet.send(agent.transport, new_req)
+          Map.replace(agent, :state, :idle)
+
+        {:error, error} ->
+          Logger.critical(inspect(error))
+          {:continue, :register}
+      end
+
+    {:noreply, next_state}
   end
 
   @impl true
   def handle_call(%Message{start_line: %RequestLine{} = _request}, _caller, agent) do
     {:noeply, agent}
-  end
-
-  @impl true
-  def handle_call({:authenticate, response, key}, _caller, agent) do
-    {:ok, new_req} = DigestAuth.make_request(List.first(agent.messages),
-        response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, [])
-
-    new_req =
-      new_req
-      |> Message.update_header(:cseq, fn {seq, method} ->
-        {seq + 1, method}
-      end)
-      |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
-        {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
-      end)
-      |> Message.update_header(:from, fn {name, uri, params} ->
-        {name, uri, %{params | "tag" => Message.create_tag()}}
-      end)
-
-    Sippet.send(agent.transport, new_req)
-
-    {:reply, :ok, Map.replace(agent, :state, :idle)}
   end
 
   @impl true
@@ -144,7 +151,9 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_call({:notify, request, _key}, _caller, agent) do
-    Logger.debug("#{inspect(request)} received a NOTIFY")
+    Sippet.send(agent.transport, Message.to_response(request, 200))
+
+    Logger.debug(inspect(request.body))
 
     {:reply, :ok, agent}
   end
@@ -152,19 +161,15 @@ defmodule Guppi.Agent do
   @impl true
   def handle_call({:refer, %Message{} = request, _key}, _caller, agent) do
     Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
-    {
-      :reply,
-      Sippet.send(agent.transport, Message.build_response(200)),
-      agent
-    }
+    {:reply,{:error, :unimplemented},agent}
   end
 
   @impl true
   def handle_call({:options, request, _key}, _caller, agent) do
-    response = Message.to_response(request, 200)
+    Message.to_response(request, 200)
     |> Message.put_header(:content_type, "application/sdp")
 
-    {:reply, Sippet.send(agent.transport, response), agent}
+    {:reply, :ok, agent}
   end
 
   @impl true
@@ -173,13 +178,8 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_call({:ok, _response}, _caller, agent) do
-    {:noreply,agent}
-  end
-
-  @impl true
   def handle_call({:response, _response, _key}, _caller, agent) do
-    {:noreply,agent}
+    {:reply, :ok, agent}
   end
 
   @impl true
