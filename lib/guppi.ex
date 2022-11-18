@@ -6,16 +6,17 @@ defmodule Guppi do
     The Guppi Application module
   """
 
-  def start, do: start [], []
+  def start, do: start([], [])
 
-  def start(_type,_args) do
+  def start(_type, _args) do
     Registry.start_link(keys: :unique, name: Guppi.Registry)
 
     start_link([], [])
   end
 
   def start_link(_type, _args) do
-    children = Enum.into(
+    children =
+      Enum.into(
         Guppi.Account.read_config!(),
         [],
         fn account ->
@@ -43,5 +44,4 @@ defmodule Guppi do
   end
 
   def count, do: Registry.count(Guppi.Registry)
-
 end

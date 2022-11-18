@@ -27,20 +27,36 @@ defmodule Guppi.Core do
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
-    GenServer.call(route_agent(incoming_request.start_line.request_uri), {incoming_request.start_line.method, incoming_request, server_key})
+    GenServer.call(
+      route_agent(incoming_request.start_line.request_uri),
+      {incoming_request.start_line.method, incoming_request, server_key}
+    )
   end
 
-  def receive_response(%Message{start_line: %StatusLine{status_code: status_code}} = incoming_response, _client_key) when status_code in [401,407] do
+  def receive_response(
+        %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
+        _client_key
+      )
+      when status_code in [401, 407] do
     send(route_agent(incoming_response.headers.to), {:authenticate, incoming_response})
     :ok
   end
 
-  def receive_response(%Message{start_line: %StatusLine{status_code: _status_code}} = incoming_response, client_key) do
-    GenServer.call(route_agent(incoming_response.headers.to), {:response, incoming_response, client_key})
+  def receive_response(
+        %Message{start_line: %StatusLine{status_code: _status_code}} = incoming_response,
+        client_key
+      ) do
+    GenServer.call(
+      route_agent(incoming_response.headers.to),
+      {:response, incoming_response, client_key}
+    )
   end
 
   def receive_response(incoming_response, client_key) do
-    GenServer.call(route_agent(incoming_response.headers.to), {:response, incoming_response, client_key})
+    GenServer.call(
+      route_agent(incoming_response.headers.to),
+      {:response, incoming_response, client_key}
+    )
   end
 
   def receive_error(error_reason, _client_or_server_key) do
@@ -54,8 +70,7 @@ defmodule Guppi.Core do
     case Registry.lookup(Guppi.Registry, uri.port) do
       [{pid, agent}] when is_pid(pid) ->
         pid
-      # [] -> [] # shouldn't even be possible tbh. refactor maybe?
+        # [] -> [] # shouldn't even be possible tbh. refactor maybe?
     end
   end
-
 end

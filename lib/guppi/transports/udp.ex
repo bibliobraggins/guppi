@@ -81,9 +81,10 @@ defmodule Guppi.Transports.UDP do
     case Keyword.fetch(options, :proxy) do
       {:ok, {proxy_host, proxy_port}} ->
         GenServer.start_link(__MODULE__, {name, ip, port, family, proxy_host, proxy_port})
+
       _ ->
         GenServer.start_link(__MODULE__, {name, ip, port, family})
-      end
+    end
   end
 
   @impl true
@@ -137,7 +138,7 @@ defmodule Guppi.Transports.UDP do
     differ from the one declared in our start_line, which is actually a pretty common scenario for Sip User Endpoints.
     In the future, this implementation should be able to handle SRV and NAPTR based proxy hosts as well.
   """
-  #@impl true
+  # @impl true
   def handle_call(
         {:send_message, message, _to_host, _to_port, key},
         _from,
@@ -154,7 +155,9 @@ defmodule Guppi.Transports.UDP do
       :ok
     else
       {:error, reason} ->
-        Logger.warn("udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}")
+        Logger.warn(
+          "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+        )
 
         if key != nil do
           Sippet.Router.receive_transport_error(state.sippet, key, reason)

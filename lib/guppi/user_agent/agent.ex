@@ -18,18 +18,24 @@ defmodule Guppi.Agent do
 
   """
   def start_link(account) do
-    agent_name =  account.uri.userinfo |> String.to_atom()
+    agent_name = account.uri.userinfo |> String.to_atom()
 
     proxy =
       with true <- Map.has_key?(account, :outbound_proxy),
            true <- Map.has_key?(account.outbound_proxy, :dns) do
-            case account.outbound_proxy.dns do
-              "A" ->
-              {account.outbound_proxy.host, account.outbound_proxy.port}
-              "SRV" ->
-                raise ArgumentError, "Cannot use SRV records at this time"
-              _ -> nil
-            end
+        case account.outbound_proxy.dns do
+          "A" ->
+            {account.outbound_proxy.host, account.outbound_proxy.port}
+
+          "SRV" ->
+            raise ArgumentError, "Cannot use SRV records at this time"
+
+          "NAPTR" ->
+            raise ArgumentError, "Cannot use NAPTR records at this time"
+
+          _ ->
+            nil
+        end
       end
 
     # start sippet instance based on sip user data
@@ -55,6 +61,7 @@ defmodule Guppi.Agent do
       case account.register do
         true ->
           :register
+
         false ->
           :init
       end
@@ -63,12 +70,10 @@ defmodule Guppi.Agent do
     GenServer.start_link(
       __MODULE__,
       %{
-        account:    account,
-        state:      init_state,
-        sippet:     sippet,
-        transport:  agent_name,
-        transactions: [],
-        messages: [],
+        account: account,
+        state: init_state,
+        sippet: sippet,
+        transport: agent_name
       }
     )
   end
@@ -78,8 +83,9 @@ defmodule Guppi.Agent do
     # we immedaitely register the "valid agent" to Guppi.Registry
     case Guppi.register(agent.account) do
       {:ok, _} -> :ok
-      error -> Logger.warn inspect error
+      error -> Logger.warn(inspect(error))
     end
+
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register -> GenServer.cast(self(), :register)
@@ -93,25 +99,29 @@ defmodule Guppi.Agent do
     registration = Guppi.Register.make_register(agent)
 
     Sippet.send(agent.transport, registration)
+
     receive do
-      {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response} when status_code in [401,407] ->
+      {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response}
+      when status_code in [401, 407] ->
         {:ok, new_req} =
           DigestAuth.make_request(
-          registration,
-          response, fn(_) -> {:ok, agent.account.sip_user, agent.account.sip_password} end, []
-        )
+            registration,
+            response,
+            fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end,
+            []
+          )
 
-      new_req =
-        new_req
-        |> Message.update_header(:cseq, fn {seq, method} ->
-          {seq + 1, method}
-        end)
-        |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
-          {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
-        end)
-        |> Message.update_header(:from, fn {name, uri, params} ->
-          {name, uri, %{params | "tag" => Message.create_tag()}}
-        end)
+        new_req =
+          new_req
+          |> Message.update_header(:cseq, fn {seq, method} ->
+            {seq + 1, method}
+          end)
+          |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+            {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+          end)
+          |> Message.update_header(:from, fn {name, uri, params} ->
+            {name, uri, %{params | "tag" => Message.create_tag()}}
+          end)
 
         Sippet.send(agent.transport, new_req)
 
@@ -137,8 +147,10 @@ defmodule Guppi.Agent do
   def handle_call({:invite, request, server_key}, _caller, agent) do
     Logger.debug("Received request: #{inspect(request.start_line)}")
 
-    response = %Message{} = Message.to_response(request, 200)
-    |> Message.put_header(:content_type, "application/sdp")
+    response =
+      %Message{} =
+      Message.to_response(request, 200)
+      |> Message.put_header(:content_type, "application/sdp")
 
     Logger.debug(inspect(response))
 
@@ -161,7 +173,7 @@ defmodule Guppi.Agent do
   @impl true
   def handle_call({:refer, %Message{} = request, _key}, _caller, agent) do
     Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
-    {:reply,{:error, :unimplemented},agent}
+    {:reply, {:error, :unimplemented}, agent}
   end
 
   @impl true
@@ -203,5 +215,4 @@ defmodule Guppi.Agent do
 
   # TODO
   defp on_call?(_agent), do: false || true
-
 end

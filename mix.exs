@@ -17,8 +17,14 @@ defmodule Guppi.MixProject do
       mod: {Guppi, []},
       extra_applications: [
         :logger,
-        :crypto,
+        :crypto
       ]
+    ]
+  end
+
+  def format do
+    [
+      inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"]
     ]
   end
 
@@ -27,7 +33,6 @@ defmodule Guppi.MixProject do
     [
       {:sippet, "~> 1.0.10"},
       {:jason, "~> 1.4"},
-
       {:socket, "~> 0.3.13"},
       {:poolboy, "~> 1.5.1"},
       {:ex_sdp, "~> 0.9.0"},
