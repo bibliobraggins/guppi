@@ -12,6 +12,8 @@ defmodule Guppi.Transports.UDP do
 
   use GenServer
 
+  alias Sippet.Message.StatusLine
+  alias Sippet.Message.RequestLine
   alias Sippet.Message
 
   require Logger
@@ -144,10 +146,19 @@ defmodule Guppi.Transports.UDP do
         _from,
         state
       ) do
-    Logger.debug([
-      "sending message to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
-      ", #{inspect(key)}"
-    ])
+    case message do
+      %Message{start_line: %RequestLine{}} ->
+        Logger.debug([
+          "sending Request to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
+          ", #{inspect(key)}"
+        ])
+      %Message{start_line: %StatusLine{}} ->
+        Logger.debug([
+          "sending Response to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
+          ", #{inspect(key)}"
+        ])
+    end
+
 
     with {:ok, to_ip} <- resolve_name(state.proxy_host, :inet),
          iodata <- Message.to_iodata(message),

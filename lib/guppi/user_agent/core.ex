@@ -68,7 +68,7 @@ defmodule Guppi.Core do
 
   defp route_agent(%Sippet.URI{} = uri) do
     case Registry.lookup(Guppi.Registry, uri.port) do
-      [{pid, agent}] when is_pid(pid) ->
+      [{pid, _agent}] when is_pid(pid) ->
         pid
         # [] -> [] # shouldn't even be possible tbh. refactor maybe?
     end
