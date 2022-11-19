@@ -176,7 +176,7 @@ defmodule Guppi.Transports.UDP do
         ])
 
         with {:ok, to_ip} <- resolve_name(to_host, :inet),
-             :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, io_msg) do
+             :ok <- :gen_udp.send(state.socket, {to_ip, to_port}, io_msg) do
           :ok
         else
           {:error, reason} ->
@@ -194,14 +194,13 @@ defmodule Guppi.Transports.UDP do
           "sending Response to #{stringify_hostport(to_host, to_port)}/udp",
           ", #{inspect(key)}"
         ])
+
         with {:ok, to_ip} <- resolve_name(to_host, :inet),
              :ok <- :gen_udp.send(state.socket, {to_ip, to_port}, io_msg) do
           :ok
         else
           {:error, reason} ->
-            Logger.warn(
-              "udp transport error for #{state.to_host}:#{to_port}: #{inspect(reason)}"
-            )
+            Logger.warn("udp transport error for #{state.to_host}:#{to_port}: #{inspect(reason)}")
 
             if key != nil do
               Sippet.Router.receive_transport_error(state.sippet, key, reason)

@@ -1,4 +1,4 @@
-defmodule Guppi.UserAgent do
+defmodule Guppi.Agent do
   use GenServer
 
   require Logger
@@ -101,6 +101,9 @@ defmodule Guppi.UserAgent do
     Sippet.send(agent.transport, registration)
 
     receive do
+      {:ok, %Message{start_line: %StatusLine{status_code: 200}}} ->
+        :ok
+
       {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response}
       when status_code in [401, 407] ->
         {:ok, new_req} =
@@ -134,12 +137,12 @@ defmodule Guppi.UserAgent do
   end
 
   @impl true
-  def handle_call(%Message{start_line: %RequestLine{} = _request}, _caller, agent) do
+  def handle_cast(%Message{start_line: %RequestLine{} = _request}, agent) do
     {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:invite, request, server_key}, _caller, agent) do
+  def handle_cast({:invite, request, _server_key}, agent) do
     Logger.debug("Received request: #{inspect(request.start_line)}")
 
     response =
@@ -149,56 +152,59 @@ defmodule Guppi.UserAgent do
 
     Logger.debug(inspect(response))
 
-    {:reply, Sippet.send(agent.transport, response), agent}
+    {:noreply, Sippet.send(agent.transport, response), agent}
   end
 
   @impl true
-  def handle_call({:notify, request, _key}, _caller, agent) do
+  def handle_cast({:notify, request, _key}, agent) do
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
     Logger.debug(inspect(request.body))
 
-    {:reply, :ok, agent}
+    {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:refer, %Message{} = request, _key}, _caller, agent) do
+  def handle_cast({:refer, %Message{} = request, _key}, agent) do
     Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
-    {:reply, {:error, :unimplemented}, agent}
+    {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:options, request, _key}, _caller, agent) do
-    {:reply, :ok, agent}
+  def handle_cast({:options, _request, _key}, agent) do
+    {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:cancel, _request, _key}, _caller, agent) do
-    {:reply, :ok, agent}
+  def handle_cast({:cancel, _request, _key}, agent) do
+    {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:response, _response, key}, _caller, agent) do
+  def handle_cast({:response, _response, key}, agent) do
     Logger.debug("Received Response: #{inspect(key)}")
-    {:reply, :ok, agent}
+    {:noreply, agent}
   end
 
   @impl true
-  def handle_call({:bye, _request, _key}, _caller, agent) do
-    {:reply, :not_implemented, agent}
+  def handle_cast({:bye, _request, _key}, agent) do
+    {:noreply, :not_implemented, agent}
   end
 
   @impl true
-  def handle_call(:status, _caller, agent) do
-    {:reply, agent, agent}
+  def handle_cast(:status, agent) do
+    {:noreply, agent, agent}
   end
 
   @impl true
-  def handle_call(:stop, _caller, agent) do
+  def handle_cast(:stop, agent) do
     # TODO
     case on_call?(agent) do
-      true -> {:reply, {:error, :on_call, agent.account.uri.authority}}
-      false -> {:stop, :normal}
+      false ->
+        {:stop, :normal}
+
+      true ->
+        {:noreply, {:error, :on_call, agent.account.uri.authority}}
     end
   end
 

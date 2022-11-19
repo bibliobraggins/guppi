@@ -23,16 +23,18 @@ defmodule Guppi.Core do
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
+    send(route_agent(incoming_request.headers.to), {:authenticate, incoming_request})
     :ok
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
-    GenServer.call(
+    GenServer.cast(
       route_agent(incoming_request.start_line.request_uri),
       {incoming_request.start_line.method, incoming_request, server_key}
     )
   end
 
+  # triggered by authentication challenges.
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         _client_key
@@ -47,16 +49,17 @@ defmodule Guppi.Core do
         client_key
       )
       when status_code in [200] do
-    Logger.debug("RESPONDED\n  WITH\n     200 :: #{client_key}")
 
-    GenServer.call(
+    Logger.debug("Received 200 OK, #{inspect(client_key)}")
+
+    GenServer.cast(
       route_agent(incoming_response.headers.to),
       {:response, incoming_response, client_key}
     )
   end
 
   def receive_response(incoming_response, client_key) do
-    GenServer.call(
+    GenServer.cast(
       route_agent(incoming_response.headers.to),
       {:response, incoming_response, client_key}
     )
@@ -64,7 +67,6 @@ defmodule Guppi.Core do
 
   def receive_error(error_reason, _client_or_server_key) do
     Logger.warn("Got Error: #{inspect(error_reason)}")
-    # route_agent((UA/TU process), error_reason, key)
   end
 
   defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)
