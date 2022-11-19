@@ -39,7 +39,7 @@ defmodule Guppi.Core do
       )
       when status_code in [401, 407] do
     send(route_agent(incoming_response.headers.to), {:authenticate, incoming_response})
-    :ok
+    # DON'T implicitly returon :ok or we break the auth flow
   end
 
   def receive_response(

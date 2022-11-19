@@ -95,7 +95,7 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast(_register, agent) do
+  def handle_cast(:register, agent) do
     registration = Guppi.Register.make_register(agent)
 
     Sippet.send(agent.transport, registration)

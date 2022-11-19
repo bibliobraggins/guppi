@@ -12,9 +12,9 @@ defmodule Guppi.Transports.UDP do
 
   use GenServer
 
-  alias Sippet.Message.StatusLine
-  alias Sippet.Message.RequestLine
-  alias Sippet.Message
+  alias Sippet.Message.StatusLine, as: StatusLine
+  alias Sippet.Message.RequestLine, as: RequestLine
+  alias Sippet.Message, as: Message
 
   require Logger
 
