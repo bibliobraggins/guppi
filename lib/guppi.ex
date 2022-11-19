@@ -20,7 +20,7 @@ defmodule Guppi do
         Guppi.Account.read_config!(),
         [],
         fn account ->
-          Supervisor.child_spec({Guppi.Agent, account},
+          Supervisor.child_spec({Guppi.UserAgent, account},
             id: {Integer.to_string(account.uri.port), account.uri.userinfo}
           )
         end

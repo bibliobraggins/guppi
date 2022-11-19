@@ -142,36 +142,70 @@ defmodule Guppi.Transports.UDP do
   """
   # @impl true
   def handle_call(
-        {:send_message, message, _to_host, _to_port, key},
+        {:send_message, message, to_host, to_port, key},
         _from,
         state
       ) do
+    io_msg = Message.to_iodata(message)
+
     case message do
-      %Message{start_line: %RequestLine{}} ->
+      %Message{start_line: %RequestLine{method: :register}} ->
         Logger.debug([
           "sending Request to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
           ", #{inspect(key)}"
         ])
-      %Message{start_line: %StatusLine{}} ->
+
+        with {:ok, to_ip} <- resolve_name(state.proxy_host, :inet),
+             :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, io_msg) do
+          :ok
+        else
+          {:error, reason} ->
+            Logger.warn(
+              "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+            )
+
+            if key != nil do
+              Sippet.Router.receive_transport_error(state.sippet, key, reason)
+            end
+        end
+
+      %Message{start_line: %RequestLine{}} ->
         Logger.debug([
-          "sending Response to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
+          "sending Request to #{stringify_hostport(to_host, to_port)}/udp",
           ", #{inspect(key)}"
         ])
-    end
 
+        with {:ok, to_ip} <- resolve_name(to_host, :inet),
+             :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, io_msg) do
+          :ok
+        else
+          {:error, reason} ->
+            Logger.warn(
+              "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+            )
 
-    with {:ok, to_ip} <- resolve_name(state.proxy_host, :inet),
-         iodata <- Message.to_iodata(message),
-         :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, iodata) do
-      :ok
-    else
-      {:error, reason} ->
-        Logger.warn(
-          "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
-        )
+            if key != nil do
+              Sippet.Router.receive_transport_error(state.sippet, key, reason)
+            end
+        end
 
-        if key != nil do
-          Sippet.Router.receive_transport_error(state.sippet, key, reason)
+      %Message{start_line: %StatusLine{}} ->
+        Logger.debug([
+          "sending Response to #{stringify_hostport(to_host, to_port)}/udp",
+          ", #{inspect(key)}"
+        ])
+        with {:ok, to_ip} <- resolve_name(to_host, :inet),
+             :ok <- :gen_udp.send(state.socket, {to_ip, to_port}, io_msg) do
+          :ok
+        else
+          {:error, reason} ->
+            Logger.warn(
+              "udp transport error for #{state.to_host}:#{to_port}: #{inspect(reason)}"
+            )
+
+            if key != nil do
+              Sippet.Router.receive_transport_error(state.sippet, key, reason)
+            end
         end
     end
 
@@ -195,10 +229,12 @@ defmodule Guppi.Transports.UDP do
       :ok
     else
       {:error, reason} ->
-        Logger.warn("udp transport error for #{to_host}:#{to_port}: #{inspect(reason)}")
+        Logger.warn(
+          "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+        )
 
         if key != nil do
-          Sippet.Router.receive_transport_error(sippet, key, reason)
+          Sippet.Router.receive_transport_error(state.sippet, key, reason)
         end
     end
 

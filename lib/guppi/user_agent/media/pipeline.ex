@@ -9,6 +9,7 @@ defmodule Guppi.Media.Pipeline do
       pa_src: PortAudio.Source,
       pa_sink: PortAudio.Sink
     ]
+
     links = [
       link(:pa_src)
       |> to(:pa_sink)

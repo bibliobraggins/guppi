@@ -1,4 +1,4 @@
-defmodule Guppi.Agent do
+defmodule Guppi.UserAgent do
   use GenServer
 
   require Logger
@@ -130,17 +130,12 @@ defmodule Guppi.Agent do
         {:error, error}
     end
 
-    Task.async(fn ->
-      Process.sleep(60000)
-      GenServer.cast(agent.transport, :register)
-    end)
-
     {:noreply, agent}
   end
 
   @impl true
   def handle_call(%Message{start_line: %RequestLine{} = _request}, _caller, agent) do
-    {:noeply, agent}
+    {:noreply, agent}
   end
 
   @impl true
@@ -154,11 +149,7 @@ defmodule Guppi.Agent do
 
     Logger.debug(inspect(response))
 
-    {
-      :reply,
-      Sippet.send(agent.transport, response),
-      Map.replace(agent, :transactions, [server_key | agent.transactions])
-    }
+    {:reply, Sippet.send(agent.transport, response), agent}
   end
 
   @impl true
@@ -178,19 +169,17 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_call({:options, request, _key}, _caller, agent) do
-    Message.to_response(request, 200)
-    |> Message.put_header(:content_type, "application/sdp")
-
     {:reply, :ok, agent}
   end
 
   @impl true
   def handle_call({:cancel, _request, _key}, _caller, agent) do
-    {:reply, :not_implemented, agent}
+    {:reply, :ok, agent}
   end
 
   @impl true
-  def handle_call({:response, _response, _key}, _caller, agent) do
+  def handle_call({:response, _response, key}, _caller, agent) do
+    Logger.debug("Received Response: #{inspect(key)}")
     {:reply, :ok, agent}
   end
 

@@ -43,9 +43,12 @@ defmodule Guppi.Core do
   end
 
   def receive_response(
-        %Message{start_line: %StatusLine{status_code: _status_code}} = incoming_response,
+        %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         client_key
-      ) do
+      )
+      when status_code in [200] do
+    Logger.debug("RESPONDED\n  WITH\n     200 :: #{client_key}")
+
     GenServer.call(
       route_agent(incoming_response.headers.to),
       {:response, incoming_response, client_key}
