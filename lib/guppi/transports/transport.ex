@@ -1,6 +1,6 @@
-defmodule Guppi.Transports.UDP do
+defmodule Guppi.Transport do
   @moduledoc """
-  Implements an UDP transport.
+  Implements a transport.
 
   The UDP transport consists basically in a single listening and sending
   process, this implementation itself.
@@ -140,7 +140,7 @@ defmodule Guppi.Transports.UDP do
     differ from the one declared in our start_line, which is actually a pretty common scenario for Sip User Endpoints.
     In the future, this implementation should be able to handle SRV and NAPTR based proxy hosts as well.
   """
-  # @impl true
+  @impl true
   def handle_call(
         {:send_message, message, to_host, to_port, key},
         _from,
@@ -207,36 +207,6 @@ defmodule Guppi.Transports.UDP do
             end
         end
     end
-
-    {:reply, :ok, state}
-  end
-
-  @impl true
-  def handle_call(
-        {:send_message, message, to_host, to_port, key},
-        _from,
-        %{socket: socket, family: family, sippet: sippet} = state
-      ) do
-    Logger.debug([
-      "sending message to #{stringify_hostport(to_host, to_port)}/udp",
-      ", #{inspect(key)}"
-    ])
-
-    with {:ok, to_ip} <- resolve_name(to_host, family),
-         iodata <- Message.to_iodata(message),
-         :ok <- :gen_udp.send(socket, {to_ip, to_port}, iodata) do
-      :ok
-    else
-      {:error, reason} ->
-        Logger.warn(
-          "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
-        )
-
-        if key != nil do
-          Sippet.Router.receive_transport_error(state.sippet, key, reason)
-        end
-    end
-
     {:reply, :ok, state}
   end
 

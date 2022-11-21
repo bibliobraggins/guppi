@@ -45,7 +45,7 @@ defmodule Guppi.Agent do
     {:ok, _transport_pid} =
       case account.transport do
         "udp" ->
-          Guppi.Transports.UDP.start_link(
+          Guppi.Transport.start_link(
             name: agent_name,
             address: Guppi.Helpers.local_ip!(),
             port: account.uri.port,
@@ -73,7 +73,8 @@ defmodule Guppi.Agent do
         account: account,
         state: init_state,
         sippet: sippet,
-        transport: agent_name
+        transport: agent_name,
+        pid: self()
       }
     )
   end
@@ -91,11 +92,12 @@ defmodule Guppi.Agent do
       :register -> GenServer.cast(self(), :register)
     end
 
-    {:ok, Map.replace(agent, :state, :idle)}
+    {:ok, agent}
   end
 
   @impl true
   def handle_cast(:register, agent) do
+    Logger.debug("Agent is sending a Registration")
     registration = Guppi.Register.make_register(agent)
 
     Sippet.send(agent.transport, registration)
@@ -104,9 +106,10 @@ defmodule Guppi.Agent do
       {:ok, %Message{start_line: %StatusLine{status_code: 200}}} ->
         :ok
 
+      # we may want to reuse this somewhere. TODO: abstract this to a cleaner "Auth" module
       {:authenticate, %Message{start_line: %StatusLine{status_code: status_code}} = response}
       when status_code in [401, 407] ->
-        {:ok, new_req} =
+        {:ok, authenticated_request} =
           DigestAuth.make_request(
             registration,
             response,
@@ -114,8 +117,8 @@ defmodule Guppi.Agent do
             []
           )
 
-        new_req =
-          new_req
+        authenticated_request =
+          authenticated_request
           |> Message.update_header(:cseq, fn {seq, method} ->
             {seq + 1, method}
           end)
@@ -126,14 +129,14 @@ defmodule Guppi.Agent do
             {name, uri, %{params | "tag" => Message.create_tag()}}
           end)
 
-        Sippet.send(agent.transport, new_req)
+        Sippet.send(agent.transport, authenticated_request)
 
       {:error, error} ->
         Logger.critical(inspect(error))
         {:error, error}
     end
 
-    {:noreply, agent}
+    {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
   end
 
   @impl true
@@ -159,7 +162,7 @@ defmodule Guppi.Agent do
   def handle_cast({:notify, request, _key}, agent) do
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
-    Logger.debug(inspect(request.body))
+    Logger.debug("#{request.start_line.method}: #{inspect(request.body)}")
 
     {:noreply, agent}
   end

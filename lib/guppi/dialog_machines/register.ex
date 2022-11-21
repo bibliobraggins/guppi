@@ -1,6 +1,29 @@
 defmodule Guppi.Register do
+  use GenStateMachine
+
+  require Logger
+
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
+  #alias Sippet.Message.StatusLine, as: StatusLine
+  #alias Sippet.DigestAuth, as: DigestAuth
+
+  def start_link(agent) do
+    GenStateMachine.start_link(__MODULE__, {:register, agent})
+  end
+
+  def handle_event(:cast, _, :register, agent) do
+    Process.sleep 200
+
+    send(agent.pid, :register)
+
+    {:next_state, :wait, agent}
+  end
+
+  def handle_event(:cast, :register, :wait, agent) do
+    Process.sleep(60)
+    {:next_state, :register, agent}
+  end
 
   def make_register(agent) do
     account = agent.account

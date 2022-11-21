@@ -1,13 +1,17 @@
 defmodule Televent do
   @moduledoc """
 
-    Event  encoding (decimal)
+    This module is a stub for now, but I hope to implement some sort of rfc2833 DTMF and hook detection logic.
+
+    Probably want to use this as the place for converting between an event on the line and an internal message.
+
+    Event    Hex    (decimal)
     _________________________
-    0--9                0--9
-    *                     10
-    #                     11
-    A--D              12--15
-    Flash                 16
+    0--9     0x00       0--9
+    *        0x00         10
+    #        0x00         11
+    A--D     0x00     12--15
+    Flash    0x00         16
 
   """
 

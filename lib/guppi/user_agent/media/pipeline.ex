@@ -1,10 +1,11 @@
 defmodule Guppi.Media.Pipeline do
   use Membrane.Pipeline
 
-  alias Membrane.PortAudio
+  alias Membrane.{PortAudio}
 
   @impl true
-  def handle_init(_) do
+  def handle_init(_opts) do
+
     children = [
       pa_src: PortAudio.Source,
       pa_sink: PortAudio.Sink
