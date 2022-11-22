@@ -39,8 +39,8 @@ defmodule Guppi do
     start()
   end
 
-  def register(account) do
-    Registry.register(Guppi.Registry, account.uri.port, String.to_atom(account.id))
+  def register(port, name) do
+    Registry.register(Guppi.Registry, port, name)
   end
 
   def count, do: Registry.count(Guppi.Registry)

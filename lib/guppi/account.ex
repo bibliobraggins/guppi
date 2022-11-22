@@ -3,9 +3,11 @@ defmodule Guppi.Account do
     Defines a struct that holds per account config variables
   """
 
+  alias Sippet.URI, as: URI
+
   defstruct [
     :register,
-    :id,
+    :name,
     :extension,
     :display_name,
     :registrar,
@@ -53,7 +55,16 @@ defmodule Guppi.Account do
   defp parse_uri!(account) do
     uri = String.replace(account.uri, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!(), [])
 
-    Map.put_new(account, :id, uri)
-    |> Map.replace!(:uri, Sippet.URI.parse!(uri))
+    parsed_uri = case URI.parse(uri) do
+      {:ok, %URI{} = parsed_uri} ->
+        parsed_uri
+      {:error, reason} ->
+        raise ArgumentError, "Invalid uri provided: #{inspect(reason)}"
+    end
+
+    id = parsed_uri.userinfo |> String.to_atom()
+
+    Map.put_new(account, :name, id)
+    |> Map.replace!(:uri, parsed_uri)
   end
 end

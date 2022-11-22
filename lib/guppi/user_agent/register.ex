@@ -1,5 +1,5 @@
 defmodule Guppi.Register do
-  use GenStateMachine
+  use GenServer
 
   require Logger
 
@@ -9,20 +9,29 @@ defmodule Guppi.Register do
   #alias Sippet.DigestAuth, as: DigestAuth
 
   def start_link(agent) do
-    GenStateMachine.start_link(__MODULE__, {:register, agent})
+    GenServer.start_link(__MODULE__, agent)
   end
 
-  def handle_event(:cast, _, :register, agent) do
-    Process.sleep 200
-
-    send(agent.pid, :register)
-
-    {:next_state, :wait, agent}
+  @impl true
+  def init(agent) do
+    {:ok, agent, {:continue, :register}}
   end
 
-  def handle_event(:cast, :register, :wait, agent) do
-    Process.sleep(60)
-    {:next_state, :register, agent}
+  @impl true
+  def handle_continue(:register, agent) do
+
+    send(agent.account.name, :register)
+
+    Logger.debug("Sent register prompt to Agent: #{agent.account.name}")
+
+    {:noreply, agent, {:continue, :wait}}
+  end
+
+  @impl true
+  def handle_continue(:wait, agent) do
+    Process.sleep(1000)
+
+    {:noreply, agent, {:continue, :register}}
   end
 
   def make_register(agent) do
