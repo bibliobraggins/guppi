@@ -82,7 +82,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
-    # we immedaitely register the "valid agent" to Guppi.Registry
+    # we immediately register the "valid agent" to Guppi.Registry
     case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
       {:ok, _} -> :ok
       error -> Logger.warn(inspect(error))
@@ -114,20 +114,10 @@ defmodule Guppi.Agent do
         fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end,
         []
     )
-    auth_request =
-      auth_request
-      |> Message.update_header(:cseq, fn {seq, method} ->
-        {seq + 1, method}
-      end)
-      |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
-        {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
-      end)
-      |> Message.update_header(:from, fn {name, uri, params} ->
-        {name, uri, %{params | "tag" => Message.create_tag()}}
-      end)
 
-    case Sippet.send(agent.transport, auth_request) do
+    case Sippet.send(agent.transport, update_branch(auth_request)) do
       :ok ->
+
         {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
@@ -135,7 +125,7 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_info({:ok, _ok_response, key}, agent) do
+  def handle_info({:ok, _response, key}, agent) do
     Logger.debug("Got OK: #{key}")
 
     {:noreply, agent}
@@ -209,7 +199,20 @@ defmodule Guppi.Agent do
 
   @impl true
   def terminate(_, _) do
-    Logger.critical("WHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\n")
+    Logger.warn("WHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\n")
+  end
+
+  defp update_branch(request) do
+    request
+    |> Message.update_header(:cseq, fn {seq, method} ->
+      {seq + 1, method}
+    end)
+    |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+      {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+    end)
+    |> Message.update_header(:from, fn {name, uri, params} ->
+      {name, uri, %{params | "tag" => Message.create_tag()}}
+    end)
   end
 
 

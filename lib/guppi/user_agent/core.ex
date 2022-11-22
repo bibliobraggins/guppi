@@ -22,11 +22,12 @@ defmodule Guppi.Core do
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
-    Logger.debug("Got: #{inspect(incoming_request.start_line.method)}")
+    Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
     send(route_agent(incoming_request.headers.to), {:authenticate, incoming_request})
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
+    Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
     GenServer.cast(
       route_agent(incoming_request.start_line.request_uri),
       {incoming_request.start_line.method, incoming_request, server_key}
@@ -48,13 +49,11 @@ defmodule Guppi.Core do
         client_key
       )
       when status_code in [200] do
-
-      Logger.debug("Received 200 OK, #{inspect(client_key)}")
       send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
   def receive_error(error_reason, _client_or_server_key) do
-    Logger.warn("Got Error: #{inspect(error_reason)}")
+    Logger.warn("Received Error: #{inspect(error_reason)}")
   end
 
   defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)
