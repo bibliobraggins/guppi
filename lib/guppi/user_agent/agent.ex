@@ -150,16 +150,14 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_cast({:invite, request, _server_key}, agent) do
-    Logger.debug("Received request: #{inspect(request.start_line)}")
-
     response =
       %Message{} =
       Message.to_response(request, 200)
       |> Message.put_header(:content_type, "application/sdp")
 
-    Logger.debug(inspect(response))
+    Sippet.send(agent.transport, response)
 
-    {:noreply, Sippet.send(agent.transport, response), agent}
+    {:noreply, agent}
   end
 
   @impl true
@@ -188,8 +186,11 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:bye, _request, _key}, agent) do
-    {:noreply, :not_implemented, agent}
+  def handle_cast({:bye, request, key}, agent) do
+    Logger.debug("Received BYE: #{key}}")
+    Sippet.send(agent.transport, Message.to_response(request, 200))
+
+    {:noreply, agent}
   end
 
   @impl true

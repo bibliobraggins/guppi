@@ -26,14 +26,14 @@ defmodule Guppi.MixProject do
   defp deps do
     [
       {:sippet, "~> 1.0.10"},
+      {:phone, "~> 0.5.6"},
+      {:ex_sdp, "~> 0.8.0"},
 
       {:jason, "~> 1.4"},
       {:socket, "~> 0.3.13"},
-      {:poolboy, "~> 1.5.1"},
+      {:poolboy, ">= 1.5.1"},
 
-      {:ex_sdp, "~> 0.8.0"},
       {:ex_libsrtp, "~> 0.5.1"},
-
       {:membrane_raw_audio_format, "~> 0.9.0"},
       {:membrane_udp_plugin, "~> 0.8.0"},
       {:membrane_realtimer_plugin, "~> 0.5.0"},

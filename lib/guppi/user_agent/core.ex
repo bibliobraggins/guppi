@@ -23,7 +23,8 @@ defmodule Guppi.Core do
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
-    send(route_agent(incoming_request.headers.to), {:authenticate, incoming_request})
+    #send(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request})
+    :ok
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
