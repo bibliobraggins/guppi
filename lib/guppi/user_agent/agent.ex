@@ -74,6 +74,7 @@ defmodule Guppi.Agent do
         state: init_state,
         sippet: sippet,
         transport: agent_name,
+        cseq: 0,
         pid: self()
       }
     )
@@ -136,7 +137,7 @@ defmodule Guppi.Agent do
         {:error, error}
     end
 
-    {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
+    {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
   end
 
   @impl true

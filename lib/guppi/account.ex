@@ -12,7 +12,6 @@ defmodule Guppi.Account do
     :transport,
     :realm,
     :proxy,
-    :outbound_proxy,
     :local_sdp,
     :uri,
     :rtp_start,
