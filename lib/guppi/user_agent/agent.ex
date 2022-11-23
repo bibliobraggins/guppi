@@ -10,12 +10,6 @@ defmodule Guppi.Agent do
 
   @moduledoc """
 
-    :init ->
-      :register
-               \
-            401||407 --> :auth
-                        /     \
-
   """
   def start_link(account) do
     transport_name = account.uri.port |> to_charlist() |> List.to_atom()
@@ -63,7 +57,7 @@ defmodule Guppi.Agent do
           :register
 
         false ->
-          :init
+          :idle
       end
 
     # run the agent GenServer
@@ -74,7 +68,8 @@ defmodule Guppi.Agent do
         state: init_state,
         sippet: sippet,
         transport: transport_name,
-        cseq: 0,
+        transactions: [],
+        cseq: 0
       },
       name: account.name
     )
@@ -91,21 +86,29 @@ defmodule Guppi.Agent do
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->
-        #GenServer.cast(self(), :register)
+        # GenServer.cast(self(), :register)
         Guppi.Register.start_link(agent)
         {:ok, agent}
+
       _ ->
         {:ok, agent}
     end
   end
 
   @impl true
-  def handle_info({:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: cseq}} = challenge}, agent) do
+  def handle_info(
+        {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: cseq}} = challenge},
+        agent
+      ) do
+    request =
+      case cseq do
+        {_, :register} ->
+          Guppi.Register.make_register(agent)
 
-    request = case cseq do
-      {_, :register} -> Guppi.Register.make_register(agent)
-      _ -> raise RuntimeError, "#{agent.account.uri.userinfo} was challenged on a method we can't make yet"
-    end
+        _ ->
+          raise RuntimeError,
+                "#{agent.account.uri.userinfo} was challenged on a method we can't make yet"
+      end
 
     {:ok, auth_request} =
       DigestAuth.make_request(
@@ -113,12 +116,12 @@ defmodule Guppi.Agent do
         challenge,
         fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end,
         []
-    )
+      )
 
     case Sippet.send(agent.transport, update_branch(auth_request)) do
       :ok ->
-
         {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
+
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
     end
@@ -133,12 +136,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_info(:register, agent) do
-
-    registration = Guppi.Register.make_register(agent)
-
-    case Sippet.send(agent.transport, registration) do
-      :ok -> Logger.debug("Attempting to send registration")
-    end
+    Sippet.send(agent.transport, Guppi.Register.make_register(agent))
 
     {:noreply, agent}
   end
@@ -150,12 +148,31 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_cast({:invite, request, _server_key}, agent) do
-    response =
-      %Message{} =
-      Message.to_response(request, 200)
-      |> Message.put_header(:content_type, "application/sdp")
+    # we have to wrap this in a try because ExSDP is based on rfc4566, and does not support some parameters being sent by typical video phones
+    # and because of the way it's implemented it raises even when we call the version of the function that should not.
+    # unsupported params discovered:
+    # - sar-supported="#{supported_aspect_ratio_id}"
+    try do
+      sdp = ExSDP.parse(request.body)
 
-    Sippet.send(agent.transport, response)
+      Sippet.send(agent.transport, Message.to_response(request, 180))
+
+      Process.sleep(200)
+
+      response =
+        Message.to_response(request, 200)
+        |> Message.put_header(:content_type, "application/sdp")
+
+      Sippet.send(agent.transport, response)
+      Logger.debug(inspect(sdp))
+    rescue
+      error ->
+        Logger.warn(
+          "could not parse sdp, sending 488:\n#{request.body}\n\nOffending parameter: #{inspect(error)}"
+        )
+
+        Sippet.send(agent.transport, Message.to_response(request, 488))
+    end
 
     {:noreply, agent}
   end
@@ -186,8 +203,7 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:bye, request, key}, agent) do
-    Logger.debug("Received BYE: #{key}}")
+  def handle_cast({:bye, request, _key}, agent) do
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
     {:noreply, agent}
@@ -200,7 +216,9 @@ defmodule Guppi.Agent do
 
   @impl true
   def terminate(_, _) do
-    Logger.warn("WHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\n")
+    Logger.warn(
+      "WHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\n"
+    )
   end
 
   defp update_branch(request) do
@@ -215,6 +233,4 @@ defmodule Guppi.Agent do
       {name, uri, %{params | "tag" => Message.create_tag()}}
     end)
   end
-
-
 end

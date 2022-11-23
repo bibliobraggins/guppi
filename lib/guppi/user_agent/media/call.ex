@@ -1,6 +1,6 @@
 defmodule Guppi.Agent.Call do
   @keys [
-    :direction,
+    :type,
     :remote_sessions,
     :local_session,
     :timestamp
@@ -10,7 +10,7 @@ defmodule Guppi.Agent.Call do
 
   def new(direction, remote_session, local_session) do
     %__MODULE__{
-      direction: direction,
+      type: direction,
       local_session: local_session,
       remote_sessions: {remote_session}
     }

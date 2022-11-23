@@ -5,8 +5,6 @@ defmodule Guppi.Register do
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
-  #alias Sippet.Message.StatusLine, as: StatusLine
-  #alias Sippet.DigestAuth, as: DigestAuth
 
   def start_link(agent) do
     GenServer.start_link(__MODULE__, agent)
@@ -19,17 +17,15 @@ defmodule Guppi.Register do
 
   @impl true
   def handle_continue(:register, agent) do
-
     send(agent.account.name, :register)
-
-    Logger.debug("Sent register prompt to Agent: #{agent.account.name}")
 
     {:noreply, agent, {:continue, :wait}}
   end
 
   @impl true
   def handle_continue(:wait, agent) do
-    Process.sleep(3600000) # TODO: make this dynamically match the value configured _for_ the agent Registration definition
+    # TODO: make this dynamically match the value configured _for_ the agent Registration definition
+    Process.sleep(36000)
 
     {:noreply, agent, {:continue, :register}}
   end

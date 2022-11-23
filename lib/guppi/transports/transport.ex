@@ -207,6 +207,7 @@ defmodule Guppi.Transport do
             end
         end
     end
+
     {:reply, :ok, state}
   end
 

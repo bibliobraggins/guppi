@@ -7,7 +7,6 @@ defmodule Guppi.Core do
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
   alias Sippet.Message.StatusLine, as: StatusLine
-  # alias Sippet.Transactions, as: Transactions
 
   @moduledoc """
     The Sippet 'Core'.
@@ -23,12 +22,14 @@ defmodule Guppi.Core do
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
-    #send(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request})
+
+    # send(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request})
     :ok
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
     Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
+
     GenServer.cast(
       route_agent(incoming_request.start_line.request_uri),
       {incoming_request.start_line.method, incoming_request, server_key}
@@ -50,7 +51,15 @@ defmodule Guppi.Core do
         client_key
       )
       when status_code in [200] do
-      send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
+    send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
+  end
+
+  def receive_response(
+        %Message{start_line: %StatusLine{}} = incoming_response,
+        client_key
+      ) do
+    Logger.warn("got a response we don't handle yet: #{incoming_response.start_line.status_code}")
+    send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
   def receive_error(error_reason, _client_or_server_key) do

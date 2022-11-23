@@ -55,12 +55,14 @@ defmodule Guppi.Account do
   defp parse_uri!(account) do
     uri = String.replace(account.uri, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!(), [])
 
-    parsed_uri = case URI.parse(uri) do
-      {:ok, %URI{} = parsed_uri} ->
-        parsed_uri
-      {:error, reason} ->
-        raise ArgumentError, "Invalid uri provided: #{inspect(reason)}"
-    end
+    parsed_uri =
+      case URI.parse(uri) do
+        {:ok, %URI{} = parsed_uri} ->
+          parsed_uri
+
+        {:error, reason} ->
+          raise ArgumentError, "Invalid uri provided: #{inspect(reason)}"
+      end
 
     id = parsed_uri.userinfo |> String.to_atom()
 
