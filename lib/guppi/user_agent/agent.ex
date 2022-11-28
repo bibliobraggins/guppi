@@ -68,7 +68,7 @@ defmodule Guppi.Agent do
         state: init_state,
         sippet: sippet,
         transport: transport_name,
-        transactions: [],
+        calls: [],
         cseq: 0
       },
       name: account.name
@@ -147,34 +147,21 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:invite, request, _server_key}, agent) do
+  def handle_cast({:invite, request, server_key}, agent) do
+    Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
+
     # we have to wrap this in a try because ExSDP is based on rfc4566, and does not support some parameters being sent by typical video phones
     # and because of the way it's implemented it raises even when we call the version of the function that should not.
     # unsupported params discovered:
     # - sar-supported="#{supported_aspect_ratio_id}"
-    try do
-      sdp = ExSDP.parse(request.body)
 
-      Sippet.send(agent.transport, Message.to_response(request, 180))
+    changeset = register_call(request.headers.call_id, agent)
 
-      Process.sleep(200)
+    response = handle_invite(request)
 
-      response =
-        Message.to_response(request, 200)
-        |> Message.put_header(:content_type, "application/sdp")
+    Sippet.send(agent.transport, response)
 
-      Sippet.send(agent.transport, response)
-      Logger.debug(inspect(sdp))
-    rescue
-      error ->
-        Logger.warn(
-          "could not parse sdp, sending 488:\n#{request.body}\n\nOffending parameter: #{inspect(error)}"
-        )
-
-        Sippet.send(agent.transport, Message.to_response(request, 488))
-    end
-
-    {:noreply, agent}
+    {:noreply, changeset}
   end
 
   @impl true
@@ -202,25 +189,73 @@ defmodule Guppi.Agent do
     {:noreply, agent}
   end
 
+  # we need to remove the call from our tracked calls and send a 200 on those cases.
   @impl true
-  def handle_cast({:bye, request, _key}, agent) do
-    Sippet.send(agent.transport, Message.to_response(request, 200))
+  def handle_cast({:bye, request, client_key}, agent) do
+    changeset =
+      case Enum.member?(agent.calls, request.headers.call_id) do
+        true ->
+          Logger.debug("Got a valid BYE, Ending Call: #{request.headers.call_id}")
+          Sippet.send(agent.transport, Message.to_response(request, 200))
 
-    {:noreply, agent}
+          Map.update!(
+            agent,
+            :calls,
+            fn calls -> List.delete(calls, request.headers.call_id) end
+          )
+
+        false ->
+          Logger.warning(
+            "got a BYE for a call we don't recognize?\nkey: #{inspect(client_key)}\ncall: #{request.headers.call_id}"
+          )
+
+          Sippet.send(agent.transport, Message.to_response(request, 481))
+          agent
+      end
+
+    {:noreply, changeset}
   end
 
   @impl true
-  def handle_cast(:status, agent) do
-    {:noreply, agent, agent}
-  end
+  def handle_call(:status, _caller, agent), do: {:reply, agent, agent}
 
   @impl true
   def terminate(_, _) do
-    Logger.warn(
-      "WHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\nWHY DID MY GENSERVER STOP\n"
-    )
+    Logger.warn("WHY DID MY GENSERVER STOP")
   end
 
+  defp register_call(call_id, agent) do
+    case Enum.member?(agent.calls, call_id) do
+      false ->
+        Map.update!(
+          agent,
+          :calls,
+          fn calls -> List.insert_at(calls, length(calls), call_id) end
+        )
+
+      true ->
+        agent
+    end
+  end
+
+  defp handle_invite(invite) do
+    try do
+      ExSDP.parse!(invite.body)
+
+      Message.to_response(invite, 200)
+      |> Message.put_header(:content_type, "application/sdp")
+    rescue
+      error ->
+        Logger.warn(
+          "could not parse sdp, sending 488:\n#{invite.body}\n\nOffending parameter: #{inspect(error)}"
+        )
+
+        Message.to_response(invite, 488)
+    end
+  end
+
+  # updates cseq, via, and from headers for a given request.
+  # appropriate for authentication challenges. may be useful elsewhere.
   defp update_branch(request) do
     request
     |> Message.update_header(:cseq, fn {seq, method} ->

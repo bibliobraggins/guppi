@@ -21,14 +21,18 @@ defmodule Guppi.Core do
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
-    Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
+    Logger.debug(
+      "#{inspect(incoming_request.start_line.method)} From: #{inspect(incoming_request.headers.from)}"
+    )
 
     # send(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request})
     :ok
   end
 
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
-    Logger.debug("Received: #{inspect(incoming_request.start_line.method)}")
+    Logger.debug(
+      "#{inspect(incoming_request.start_line.method)} From: #{inspect(incoming_request.headers.from)}"
+    )
 
     GenServer.cast(
       route_agent(incoming_request.start_line.request_uri),
@@ -42,6 +46,7 @@ defmodule Guppi.Core do
         _client_key
       )
       when status_code in [401, 407] do
+    Logger.debug("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
     send(route_agent(incoming_response.headers.to), {:authenticate, incoming_response})
     # DON'T implicitly returon :ok or we break the auth flow
   end
@@ -51,14 +56,15 @@ defmodule Guppi.Core do
         client_key
       )
       when status_code in [200] do
+    Logger.debug("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
   def receive_response(
-        %Message{start_line: %StatusLine{}} = incoming_response,
+        %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         client_key
       ) do
-    Logger.warn("got a response we don't handle yet: #{incoming_response.start_line.status_code}")
+    Logger.debug("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 

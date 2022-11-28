@@ -25,7 +25,7 @@ defmodule Guppi.Register do
   @impl true
   def handle_continue(:wait, agent) do
     # TODO: make this dynamically match the value configured _for_ the agent Registration definition
-    Process.sleep(36000)
+    Process.sleep(360_000)
 
     {:noreply, agent, {:continue, :register}}
   end
