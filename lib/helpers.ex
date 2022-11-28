@@ -4,8 +4,12 @@ defmodule Guppi.Helpers do
   def local_ip!() do
     get_interfaces()
     |> get_local_ip()
-    # |> is_private?()
     |> ip_string()
+  end
+
+  def local_ip() do
+    get_interfaces()
+    |> get_local_ip()
   end
 
   defp get_interfaces() do
@@ -51,7 +55,7 @@ defmodule Guppi.Helpers do
     m=audio #{Enum.random(20000..40000)} RTP/AVP 0 127
     a=rtpmap:0 PCMU/8000
     a=rtpmap:127 telephone-event/8000
-    """
+    """ |> ExSDP.parse()
   end
 
   def sdp() do
@@ -63,32 +67,5 @@ defmodule Guppi.Helpers do
       address: local_ip!(),
       port: Enum.random(20000..40000)
     ]
-  end
-
-  def validate_session(sdp) do
-    case ExSDP.parse(sdp) do
-      {:ok, parsed} -> IO.inspect(parsed)
-      {:error, error} -> error
-    end
-  end
-
-  def test do
-    """
-    INVITE sip:192.168.0.203 SIP/2.0
-    Allow-Events: conference,talk,hold
-    Via: SIP/2.0/UDP 192.168.0.224:5060;branch=z9hG4bK149f2c5eCDEB0324
-    User-Agent: PolycomVVX-VVX_450-UA/6.4.3.5018
-    To: <sip:192.168.0.203>
-    Supported: replaces, 100rel
-    Max-Forwards: 70
-    From: "VVX 450" <sip:VVX450@192.168.0.224>;tag=AF2E436D-4B04B5AB
-    CSeq: 1 INVITE
-    Content-Type: application/sdp
-    Content-Length: 352
-    Contact: <sip:VVX450@192.168.0.224>
-    Call-ID: c9eed99f10837678ee3f8739cc3a53e7
-    Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER
-    Accept-Language: en
-    """
   end
 end

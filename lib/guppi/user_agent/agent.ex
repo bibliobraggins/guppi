@@ -157,7 +157,24 @@ defmodule Guppi.Agent do
 
     changeset = register_call(request.headers.call_id, agent)
 
-    response = handle_invite(request)
+    response =
+      try do
+        sdp = ExSDP.parse!(request.body)
+
+        Logger.debug(inspect(sdp))
+        # TODO: implement configurable validations?
+        # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
+
+        Message.to_response(request, 200)
+        |> Message.put_header(:content_type, "application/sdp")
+      rescue
+        error ->
+          Logger.warn(
+            "could not parse sdp, sending 488:\n#{request.body}\n\nOffending parameter: #{inspect(error)}"
+          )
+
+          Message.to_response(request, 488)
+      end
 
     Sippet.send(agent.transport, response)
 
@@ -195,7 +212,8 @@ defmodule Guppi.Agent do
     changeset =
       case Enum.member?(agent.calls, request.headers.call_id) do
         true ->
-          Logger.debug("Got a valid BYE, Ending Call: #{request.headers.call_id}")
+          Logger.debug("BYE is valid, closing Call: #{request.headers.call_id}")
+          # TODO: tear down call resource in future media engine
           Sippet.send(agent.transport, Message.to_response(request, 200))
 
           Map.update!(
@@ -238,22 +256,6 @@ defmodule Guppi.Agent do
     end
   end
 
-  defp handle_invite(invite) do
-    try do
-      ExSDP.parse!(invite.body)
-
-      Message.to_response(invite, 200)
-      |> Message.put_header(:content_type, "application/sdp")
-    rescue
-      error ->
-        Logger.warn(
-          "could not parse sdp, sending 488:\n#{invite.body}\n\nOffending parameter: #{inspect(error)}"
-        )
-
-        Message.to_response(invite, 488)
-    end
-  end
-
   # updates cseq, via, and from headers for a given request.
   # appropriate for authentication challenges. may be useful elsewhere.
   defp update_branch(request) do
@@ -267,5 +269,9 @@ defmodule Guppi.Agent do
     |> Message.update_header(:from, fn {name, uri, params} ->
       {name, uri, %{params | "tag" => Message.create_tag()}}
     end)
+  end
+
+  defp offer_answer(account) do
+    ExSDP.new()
   end
 end
