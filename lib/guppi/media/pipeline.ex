@@ -1,7 +1,7 @@
 defmodule Guppi.Media.Pipeline do
   use Membrane.Pipeline
 
-  alias Membrane.{PortAudio}
+  alias Membrane.{PortAudio, UDP, RTP}
 
   @doc """
     TODO:
@@ -30,15 +30,29 @@ defmodule Guppi.Media.Pipeline do
   """
 
   @impl true
-  def handle_init(_opts) do
+  def handle_init(opts) do
+    spec = %ParentSpec{
+      children: [
+        audio_src: %UDP.Source{
+          local_port_no: opts.local_port,
+          local_address: opts.local_ip
+        },
+        rtp: %RTP.SessionBin{
+          fmt_mapping: %{
+            0 => {:PCMU, 8_000},
+            120 => {:OPUS, 48_000}
+          }
+        }
+        ]
+      }
+
     children = [
       pa_src: PortAudio.Source,
       pa_sink: PortAudio.Sink
     ]
 
     links = [
-      link(:pa_src)
-      |> to(:pa_sink)
+      link(:audio_src) |> via_in(:rtp_input) |> to(:rtp)
     ]
 
     {{:ok, spec: %ParentSpec{children: children, links: links}}, %{}}

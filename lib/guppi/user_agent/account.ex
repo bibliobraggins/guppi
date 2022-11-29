@@ -16,8 +16,6 @@ defmodule Guppi.Account do
     :proxy,
     :local_sdp,
     :uri,
-    :rtp_start,
-    :rtp_end,
     :max_forwards,
     :digit_map,
     :primary_dns,
@@ -28,7 +26,7 @@ defmodule Guppi.Account do
     :sip_server_1,
     :sip_server_2,
     :outbound_proxy,
-    :codecs,
+    :sdp,
     :certificates
   ]
 

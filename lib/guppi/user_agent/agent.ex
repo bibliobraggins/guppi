@@ -274,4 +274,8 @@ defmodule Guppi.Agent do
   defp offer_answer(account) do
     ExSDP.new()
   end
+
+  def status(username) do
+    GenServer.call(username, :status)
+  end
 end
