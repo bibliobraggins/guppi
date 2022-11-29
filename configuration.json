@@ -5,9 +5,9 @@
           "register": true,
           "codecs": "pcmu",
           "transport": "udp",
-          "uri":"sip:username@0.0.0.0:5060",
-          "sip_user":"username",
-          "sip_password":"**secret**",
+          "uri":"sip:leviathan@0.0.0.0:5060",
+          "sip_user":"leviathan",
+          "sip_password":"75fadb6ae1",
           "realm":"sbcrtp.b2.alianza.com",
           "sdp": {
             "direction":"recvonly",
