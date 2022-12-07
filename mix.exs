@@ -14,7 +14,6 @@ defmodule Guppi.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      mod: {Guppi, []},
       extra_applications: [
         :logger,
         :crypto
@@ -32,13 +31,18 @@ defmodule Guppi.MixProject do
       {:socket, "~> 0.3.13"},
       {:poolboy, ">= 1.5.1"},
       {:ex_libsrtp, "~> 0.5.1"},
+      {:membrane_common_c, "~> 0.13.0"},
       {:membrane_raw_audio_format, "~> 0.9.0"},
       {:membrane_udp_plugin, "~> 0.8.0"},
       {:membrane_realtimer_plugin, "~> 0.5.0"},
+      {:membrane_audio_mix_plugin, "~> 0.10.0"},
       {:membrane_rtp_plugin, "~> 0.15.0"},
       {:membrane_rtp_opus_plugin, "~> 0.6.0"},
       {:membrane_opus_plugin, "~> 0.15.0"},
-      {:membrane_portaudio_plugin, "~> 0.13.0"}
+      {:membrane_portaudio_plugin, "~> 0.13.0"},
+      {:membrane_file_plugin, "~> 0.12.0"},
+      {:membrane_wav_plugin, "~> 0.7.0"},
+      {:membrane_ffmpeg_swresample_plugin, "<= 0.16.0"},
 
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}

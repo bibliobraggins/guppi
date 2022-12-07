@@ -1,8 +1,4 @@
 defmodule Guppi.Media.Pipeline do
-  use Membrane.Pipeline
-
-  alias Membrane.{PortAudio, UDP, RTP}
-
   @doc """
     TODO:
       implement Audio Media & RTP sources & sinks -
@@ -29,32 +25,40 @@ defmodule Guppi.Media.Pipeline do
       implement MOS aggregation based on RTCP events?
   """
 
+  use Membrane.Pipeline
+
   @impl true
-  def handle_init(opts) do
-    spec = %ParentSpec{
-      children: [
-        audio_src: %UDP.Source{
-          local_port_no: opts.local_port,
-          local_address: opts.local_ip
-        },
-        rtp: %RTP.SessionBin{
-          fmt_mapping: %{
-            0 => {:PCMU, 8_000},
-            120 => {:OPUS, 48_000}
-          }
+  def handle_init(%{port: port, address: address}) do
+    children = %{
+      file: %Membrane.File.Source{
+        location: "./hold.wav"
+      },
+      parser: Membrane.WAV.Parser,
+      audio_realtimer: Membrane.Realtimer,
+      # Stream from file
+      rtp_payloader: %Membrane.RTP.SessionBin{
+        fmt_mapping: %{
+          0 => {:PCMU, 8_000},
         }
-        ]
-      }
+      },
+      udp_sink: %Membrane.UDP.Sink{
+        destination_port_no: port,
+        destination_address: address,
+      },
+    }
 
-    children = [
-      pa_src: PortAudio.Source,
-      pa_sink: PortAudio.Sink
-    ]
-
+    # Setup the flow of the data
     links = [
-      link(:audio_src) |> via_in(:rtp_input) |> to(:rtp)
+      link(:file)
+      |> to(:parser)
+      |> via_in(Pad.ref(:input, 0))
+      |> to(:rtp_payloader)
+      |> via_out(Pad.ref(:rtp_output, 0), options: [payload_type: 0])
+      |> to(:audio_realtimer)
+      |> to(:udp_sink)
     ]
 
-    {{:ok, spec: %ParentSpec{children: children, links: links}}, %{}}
+    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{}}
   end
+
 end

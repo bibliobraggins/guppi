@@ -1,21 +1,21 @@
 defmodule Guppi.Media do
-
   def sdp(%Guppi.Account{} = account) do
-    ExSDP.new([
-      version: 0,
+    description =
+      ExSDP.new(
+        version: 0,
+        origin: [
+          network_type: "IN",
+          address: :inet_parse.address(account.uri.host),
+          session_id: Enum.random(0..131_070),
+          session_version: 0
+        ],
+        attributes: [String.to_atom(account.sdp.direction)],
+        connection_data: [
+          address: :inet_parse.address(account.uri.host)
+        ]
+      )
 
-      origin: [
-        network_type: "IN",
-        address: :inet_parse.address(account.uri.host),
-        session_id: Enum.random(0..131_070),
-        session_version: 0,
-      ],
-      attributes: [String.to_atom(account.sdp.direction)],
-      connection_data: [
-        address: :inet_parse.address(account.uri.host),
-        ttl: account.sdp.ttl
-      ]
-    ])
+    description
   end
 
   def fake_sdp() do
@@ -25,49 +25,45 @@ defmodule Guppi.Media do
       origin: %ExSDP.Origin{
         username: "-",
         network_type: "IN",
-        session_id: 1669678468,
-        session_version: 1669678468,
-        address: {192, 168, 3, 105}
+        session_id: Enum.random(0..65535),
+        session_version: 0,
+        address: Guppi.Helpers.local_ip()
       },
       timing: %ExSDP.Timing{
         start_time: 0,
         stop_time: 0
       },
       time_zones_adjustments: nil,
-      connection_data: %ExSDP.ConnectionData{address: {192, 168, 3, 105}, network_type: "IN"},
+      connection_data: %ExSDP.ConnectionData{
+        address: Guppi.Helpers.local_ip(),
+        network_type: "IN"
+      },
       attributes: [:sendrecv],
       bandwidth: [],
       media: [
         %ExSDP.Media{
           type: :audio,
-          port: 2246,
+          port: 20000,
           protocol: "RTP/AVP",
-          fmt: [117, 0, 127],
+          fmt: [10],
           port_count: 1,
-          connection_data: %ExSDP.ConnectionData{address: {192, 168, 3, 105}, address_count: nil, ttl: nil, network_type: "IN"},
-          bandwidth: [],
-          attributes: [%ExSDP.Attribute.RTPMapping{
-            payload_type: 117,
-            encoding: "L16",
-            clock_rate: 8000,
-            params: 1
+          connection_data: %ExSDP.ConnectionData{
+            address: Guppi.Helpers.local_ip(),
+            address_count: nil,
+            ttl: nil,
+            network_type: "IN"
           },
-          %ExSDP.Attribute.RTPMapping{
-            payload_type: 0,
-            encoding: "PCMU",
-            clock_rate: 8000,
-            params: 1
-          },
-          %ExSDP.Attribute.RTPMapping{
-            payload_type: 127,
-            encoding: "telephone-event",
-            clock_rate: 8000,
-            params: 1
-          }
-        ]
-      }
-    ],
-    time_repeats: []
-  }
+          attributes: [
+            %ExSDP.Attribute.RTPMapping{
+              payload_type: 101,
+              encoding: "OPUS",
+              clock_rate: 48000,
+              params: 1
+            }
+          ]
+        }
+      ],
+      time_repeats: []
+    }
   end
 end

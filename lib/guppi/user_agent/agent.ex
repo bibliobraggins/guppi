@@ -158,23 +158,18 @@ defmodule Guppi.Agent do
     changeset = register_call(request.headers.call_id, agent)
 
     response =
-      try do
-        sdp = ExSDP.parse!(request.body)
+      case validate_offer(request.body) do
+        {:ok, _sdp_offer} ->
+          Message.to_response(request, 200)
+          # |> Message.put_header(:content_type, "application/sdp")
+          |> Map.replace!(:body, to_string(Guppi.Media.fake_sdp()))
 
-        Logger.debug(inspect(sdp))
-        # TODO: implement configurable validations?
-        # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
-
-        Message.to_response(request, 200)
-        |> Message.put_header(:content_type, "application/sdp")
-      rescue
-        error ->
-          Logger.warn(
-            "could not parse sdp, sending 488:\n#{request.body}\n\nOffending parameter: #{inspect(error)}"
-          )
-
-          Message.to_response(request, 488)
+        {:error, error} ->
+          {:error, error}
       end
+
+    # TODO: implement configurable validations?
+    # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
 
     Sippet.send(agent.transport, response)
 
@@ -271,8 +266,21 @@ defmodule Guppi.Agent do
     end)
   end
 
-  defp offer_answer(account) do
-    ExSDP.new()
+  defp validate_offer(body) do
+    try do
+      sdp = ExSDP.parse!(body)
+
+      IO.inspect(sdp)
+
+      {:ok, sdp}
+    rescue
+      error ->
+        Logger.warn(
+          "could not parse sdp, sending 488:\n#{body}\n\nOffending parameter: #{inspect(error)}"
+        )
+
+        {:error, error}
+    end
   end
 
   def status(username) do
