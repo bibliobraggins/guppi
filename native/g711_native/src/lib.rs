@@ -1,5 +1,3 @@
-#![feature(concat_bytes)]
-
 pub mod g711;
 
 rustler::init! {

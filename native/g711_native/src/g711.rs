@@ -46,8 +46,8 @@ fn compress_ulaw(sample: i16) -> u8 {
   if sign != 0 {
     pcm_value = -pcm_value;
   }
-  if pcm_value > 32635 {
-    pcm_value = 32635;
+  if pcm_value > 0x7F7B {
+    pcm_value = 0x7F7B;
   }
   pcm_value += 0x84;
   let mut exponent: i16 = 7;
