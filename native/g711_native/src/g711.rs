@@ -40,23 +40,22 @@ fn linear_to_ulaw(sample: i16) -> u8 {
   compress_ulaw(sample)
 }
 
-fn compress_ulaw(sample: i16) -> u8 {
-  let mut pcm_value = sample;
-  let sign = (pcm_value >> 8) & 0x80;
+fn compress_ulaw(mut sample: i16) -> u8 {
+  let sign = (sample >> 8) & 0x80;
   if sign != 0 {
-    pcm_value = -pcm_value;
+    sample = -sample;
   }
-  if pcm_value > 0x7F7B {
-    pcm_value = 0x7F7B;
+  if sample > 0x7F7B {
+    sample = 0x7F7B;
   }
-  pcm_value += 0x84;
+  sample += 0x84;
   let mut exponent: i16 = 7;
   let mut mask = 0x4000;
-  while pcm_value & mask == 0 {
+  while sample & mask == 0 {
     exponent -= 1;
     mask >>= 1;
   }
-  let mantissa: i16 = (pcm_value >> (exponent + 3)) & 0x0f;
+  let mantissa: i16 = (sample >> (exponent + 3)) & 0x0f;
   let ulaw_value = sign | exponent << 4 | mantissa;
   (!ulaw_value) as u8
 }
@@ -68,6 +67,13 @@ pub fn ulaw_to_linear(sample: u8) -> i16 {
 
 fn expand_ulaw(sample: u8) -> i16 {
   ULAW_LOOKUP_TABLE[sample as usize]
+}
+
+fn i16_to_bytes(sample: i16) -> [u8;2] {
+  [
+    ((sample >> 0) & 0xff) as u8,
+    ((sample >> 8) & 0xff) as u8
+  ]
 }
 
 #[rustler::nif]
@@ -108,11 +114,4 @@ pub fn compress_ulaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Bin
   }
 
   Ok(Binary::from_owned(out_buff, env))
-}
-
-fn i16_to_bytes(sample: i16) -> [u8;2] {
-  [
-    ((sample >> 0) & 0xff) as u8,
-    ((sample >> 8) & 0xff) as u8
-  ]
 }
