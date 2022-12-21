@@ -157,21 +157,27 @@ defmodule Guppi.Agent do
 
     changeset = register_call(request.headers.call_id, agent)
 
-    response =
-      case validate_offer(request.body) do
-        {:ok, _sdp_offer} ->
-          Message.to_response(request, 200)
-          # |> Message.put_header(:content_type, "application/sdp")
-          |> Map.replace!(:body, to_string(Guppi.Media.fake_sdp()))
+    sdp_string = to_string(Guppi.Media.fake_sdp()) |> inspect() |> Logger.debug()
 
-        {:error, error} ->
-          {:error, error}
-      end
+    case validate_offer(request.body) do
+      {:ok, sdp_offer} ->
+
+        Sippet.send(agent.transport, Message.to_response(request, 200))
+
+        final =
+          Message.to_response(request, 200)
+          |> Map.replace!(:body, sdp_string)
+
+        #{:ok, _sender_pid} = Guppi.TX_FIFO.start_link(tx_pipeline_options(sdp_offer))
+
+        Sippet.send(agent.transport, final)
+
+      {:error, error} ->
+        {:error, error}
+    end
 
     # TODO: implement configurable validations?
     # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
-
-    Sippet.send(agent.transport, response)
 
     {:noreply, changeset}
   end
@@ -219,7 +225,7 @@ defmodule Guppi.Agent do
 
         false ->
           Logger.warning(
-            "got a BYE for a call we don't recognize?\nkey: #{inspect(client_key)}\ncall: #{request.headers.call_id}"
+            "Got BYE for a call we don't recognize\nkey: #{inspect(client_key)}\ncall: #{request.headers.call_id}"
           )
 
           Sippet.send(agent.transport, Message.to_response(request, 481))
@@ -270,7 +276,7 @@ defmodule Guppi.Agent do
     try do
       sdp = ExSDP.parse!(body)
 
-      IO.inspect(sdp)
+      #IO.inspect(sdp)
 
       {:ok, sdp}
     rescue
@@ -285,5 +291,18 @@ defmodule Guppi.Agent do
 
   def status(username) do
     GenServer.call(username, :status)
+  end
+
+  def send_ringing_response(request, transport, sdp_string) do
+    provisional =
+      Message.to_response(request, 183)
+      |> Map.replace!(:body, sdp_string)
+
+    Sippet.send(transport, provisional)
+  end
+
+  defp tx_pipeline_options(sdp_offer) do
+    [map] = Enum.map(sdp_offer.media, fn %ExSDP.Media{} = media -> %{port: media.port, address: media.connection_data.address} end)
+    map
   end
 end

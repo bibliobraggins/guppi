@@ -43,7 +43,8 @@ defmodule Guppi.MixProject do
       {:membrane_file_plugin, "~> 0.12.0"},
       {:membrane_wav_plugin, "~> 0.7.0"},
       {:membrane_ffmpeg_swresample_plugin, "<= 0.16.0"},
-
+      {:membrane_fake_plugin, "~> 0.8.0"},
+      {:rustler, "~> 0.26.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]

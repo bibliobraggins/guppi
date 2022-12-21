@@ -35,3 +35,5 @@ resources
 *.lock
 
 *.wav
+
+target/

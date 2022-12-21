@@ -1,31 +1,24 @@
 defmodule Guppi.Media do
-  def sdp(%Guppi.Account{} = account) do
-    description =
-      ExSDP.new(
-        version: 0,
-        origin: [
-          network_type: "IN",
-          address: :inet_parse.address(account.uri.host),
-          session_id: Enum.random(0..131_070),
-          session_version: 0
-        ],
-        attributes: [String.to_atom(account.sdp.direction)],
-        connection_data: [
-          address: :inet_parse.address(account.uri.host)
-        ]
-      )
-
-    description
+  def sdp(account) do
+    ExSDP.new(
+      version: 0,
+      origin: [
+        network_type: "IN",
+        address: :inet_parse.address(account.uri.host),
+        session_id: Enum.random(0..131_070),
+        session_version: 0
+      ]
+    )
   end
 
   def fake_sdp() do
     %ExSDP{
       version: 0,
-      session_name: "Polycom IP Phone",
+      session_name: "Guppi_#{Enum.random(0..65_535)}",
       origin: %ExSDP.Origin{
         username: "-",
         network_type: "IN",
-        session_id: Enum.random(0..65535),
+        session_id: Enum.random(0..65_535),
         session_version: 0,
         address: Guppi.Helpers.local_ip()
       },
@@ -55,15 +48,31 @@ defmodule Guppi.Media do
           },
           attributes: [
             %ExSDP.Attribute.RTPMapping{
-              payload_type: 101,
-              encoding: "OPUS",
-              clock_rate: 48000,
+              payload_type: 0,
+              encoding: "G711",
+              clock_rate: 8000,
+              params: 1
+            },
+            %ExSDP.Attribute.RTPMapping{
+              payload_type: 127,
+              encoding: "telephone-event",
+              clock_rate: 8000,
               params: 1
             }
           ]
         }
       ],
       time_repeats: []
+    }
+  end
+
+
+  def l16_8() do
+    %ExSDP.Attribute.RTPMapping{
+      payload_type: 117,
+      encoding: "L16.8",
+      clock_rate: 8000,
+      params: 1
     }
   end
 end
