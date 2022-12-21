@@ -37,28 +37,8 @@ static ULAW_LOOKUP_TABLE: [i16;256] = [
 
 #[rustler::nif]
 fn linear_to_ulaw(sample: i16) -> u8 {
-  let mut pcm_value = sample;
-  let sign = (pcm_value >> 8) & 0x80;
-  if sign != 0 {
-    pcm_value = -pcm_value;
-  }
-  if pcm_value > 32635 {
-    pcm_value = 32635;
-  }
-  pcm_value += 0x84;
-  let mut exponent: i16 = 7;
-  let mut mask = 0x4000;
-  while pcm_value & mask == 0 {
-    exponent -= 1;
-    mask >>= 1;
-  }
-  let mantissa: i16 = (pcm_value >> (exponent + 3)) & 0x0f;
-  let ulaw_value = sign | exponent << 4 | mantissa;
-  (!ulaw_value) as u8
+  compress_ulaw(sample)
 }
-
-
-
 
 fn compress_ulaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
@@ -83,13 +63,31 @@ fn compress_ulaw(sample: i16) -> u8 {
 
 #[rustler::nif]
 pub fn ulaw_to_linear(sample: u8) -> i16 {
-    ULAW_LOOKUP_TABLE[sample as usize]
+  expand_ulaw(sample)
+}
+
+fn expand_ulaw(sample: u8) -> i16 {
+  ULAW_LOOKUP_TABLE[sample as usize]
 }
 
 #[rustler::nif]
-pub fn expand_ulaw_buffer<'a>(buff: Binary<'a>) -> NifResult<Binary<'a>> {
-  // todo
-  Ok(buff)
+pub fn expand_ulaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Binary<'a>> {
+  let mut out_buff = OwnedBinary::new(buff.len()*2).unwrap();
+
+  let mut vec = Vec::new();
+  for sample in buff.as_slice() {
+    vec.push(
+      expand_ulaw(*sample)
+    )
+  };
+
+  let mut i = 0;
+  for bytes in out_buff.as_mut_slice().chunks_mut(2) {
+    [bytes[0], bytes[1]] = i16_to_bytes(vec[i]);
+    i+=1;
+  };
+
+  Ok(Binary::from_owned(out_buff, env))
 }
 
 #[rustler::nif]
@@ -98,15 +96,23 @@ pub fn compress_ulaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Bin
 
   let mut vec = Vec::new();
   for sample in buff.as_slice().chunks(2) {
-    vec.push(compress_ulaw((((sample[0] as u16) << 8) | sample[1] as u16) as i16));
+    vec.push(
+      compress_ulaw(((( sample[0] as u16 ) << 8) | sample[1] as u16 ) as i16)
+    );
   }
 
   let mut i = 0;
-  
   for byte in out_buff.as_mut_slice() {
     *byte = vec[i];
     i+=1;
   }
 
   Ok(Binary::from_owned(out_buff, env))
+}
+
+fn i16_to_bytes(sample: i16) -> [u8;2] {
+  [
+    ((sample >> 0) & 0xff) as u8,
+    ((sample >> 8) & 0xff) as u8
+  ]
 }
