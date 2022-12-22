@@ -6,4 +6,12 @@ defmodule G711.Native do
   def compress_ulaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
   def expand_ulaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
 
+  def ulaw_to_alaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
+  def alaw_to_ulaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
+
+  def alaw_to_linear(_), do: :erlang.nif_error(:nif_not_loaded)
+  def linear_to_alaw(_), do: :erlang.nif_error(:nif_not_loaded)
+  def compress_alaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
+  def expand_alaw_buffer(_), do: :erlang.nif_error(:nif_not_loaded)
+
 end
