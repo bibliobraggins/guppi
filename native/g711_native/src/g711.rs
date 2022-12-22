@@ -105,7 +105,7 @@ pub fn compress_ulaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Bin
   let mut vec = Vec::new();
   for sample in buff.as_slice().chunks(2) {
     vec.push(
-      compress_ulaw(((( sample[0] as u16 ) << 8) | sample[1] as u16 ) as i16)
+      compress_ulaw((((sample[0] as u16 ) << 8) | sample[1] as u16 ) as i16)
     );
   }
 
