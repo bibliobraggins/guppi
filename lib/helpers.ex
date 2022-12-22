@@ -55,4 +55,11 @@ defmodule Guppi.Helpers do
     a=rtpmap:127 telephone-event/8000
     """
   end
+
+  def measure(function) do
+    function
+    |> :timer.tc
+    |> elem(0)
+    |> Kernel./(1_000_000)
+  end
 end

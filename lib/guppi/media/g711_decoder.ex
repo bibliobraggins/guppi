@@ -38,7 +38,7 @@ defmodule G711u.Decoder do
 
   @impl true
   def handle_process(:input, %Membrane.Buffer{} = buffer, _context, state) do
-    out_buff = handle_buffer(buffer.payload)
+    out_buff = G711.Native.compress_ulaw_buffer(buffer.payload)
 
     {{:ok, buffer: {:output, Map.replace!(buffer, :payload, out_buff)}}, state}
   end

@@ -38,12 +38,12 @@ defmodule G711u.Encoder do
 
   @impl true
   def handle_process(:input, %Membrane.Buffer{} = buffer, _context, state) do
-    out_buff = handle_buffer(buffer.payload)
 
-    {{:ok, buffer: {:output, Map.replace!(buffer, :payload, out_buff)}}, state}
+    Logger.debug(G711.Native.expand_ulaw_buffer(buffer.payload))
+
+    {{:ok, buffer: {:output, buffer}}, state}
   end
 
-  @spec handle_buffer(<<_::_*16>>) :: <<_::_*8>>
   def handle_buffer(<<buffer :: bitstring()>>) do
     output = <<>>
 
