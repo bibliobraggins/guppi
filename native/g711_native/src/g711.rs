@@ -70,7 +70,6 @@ static ALAW_TO_LINEAR: [i16; 256] = [
     944,   912,  1008,   976,   816,   784,   880,   848 
 ];
 
-#[allow(dead_code)]
 static ULAW_TO_ALAW: [u8;128] = [
   1,    1,    2,    2,    3,    3,    4,    4,
   5,    5,    6,    6,    7,    7,    8,    8,
@@ -90,7 +89,6 @@ static ULAW_TO_ALAW: [u8;128] = [
   121,  122,  123,  124,  125,  126,  127,  128
 ];
 
-#[allow(dead_code)]
 static ALAW_TO_ULAW: [u8; 128] = [
   1,    3,    5,    7,    9,    11,   13,   15,
   16,   17,   18,   19,   20,   21,   22,   23,
@@ -118,11 +116,11 @@ fn expand_alaw(sample: u8) -> i16 {
   ALAW_TO_LINEAR[(sample) as usize]
 }
 
-fn ulaw_to_alaw(sample: u8) -> u8 {
+fn u_to_a(sample: u8) -> u8 {
   ULAW_TO_ALAW[sample as usize]
 }
 
-fn alaw_to_ulaw(sample: u8) -> u8 {
+fn a_to_u(sample: u8) -> u8 {
   ALAW_TO_ULAW[sample as usize]
 }
 
@@ -134,29 +132,31 @@ fn i16_to_bytes(sample: i16) -> [u8;2] {
   ]
 }
 
-fn compress_alaw(mut sample: i16) -> u8 {
-  let sign = (sample & 0x80) >> 8;
+#[allow(overflowing_literals, unused_comparisons)]
+pub fn compress_alaw(sample: i16) -> u8 {
+  let mut pcm_value = sample;
+  let sign = (pcm_value & 0x8000) >> 8;
   if sign != 0 {
-    sample = -sample;
+    pcm_value = -pcm_value;
   }
   // Clip at 15-bits
-  if sample > 0x7f {
-    sample = 0x7f;
+  if pcm_value > 0x7fff {
+    pcm_value = 0x7fff;
   }
   let mut exponent: i16 = 7;
   let mut mask = 0x4000;
-  while sample & mask == 0 && exponent > 0 {
+  while pcm_value & mask == 0 && exponent > 0 {
     exponent -= 1;
     mask >>= 1;
   }
-  let mantissa: i16 =
+  let manitssa: i16 =
     if exponent == 0 {
-      (sample >> 4) & 0x0f
+      (pcm_value >> 4) & 0x0f
     }
     else {
-      (sample >> (exponent + 3)) & 0x0f
+      (pcm_value >> (exponent + 3)) & 0x0f
     };
-  let alaw_value = sign | exponent << 4 | mantissa;
+  let alaw_value = sign | exponent << 4 | manitssa;
   (alaw_value ^ 0xd5) as u8
 }
 
@@ -188,6 +188,16 @@ fn linear_to_ulaw(sample: i16) -> u8 {
 #[rustler::nif]
 fn linear_to_alaw(sample: i16) -> u8 {
   compress_alaw(sample)
+}
+
+#[rustler::nif]
+fn ulaw_to_alaw(sample: u8) -> u8 {
+  u_to_a(sample)
+}
+
+#[rustler::nif]
+fn alaw_to_ulaw(sample: u8) -> u8 {
+  a_to_u(sample)
 }
 
 #[rustler::nif]
@@ -226,7 +236,7 @@ pub fn ulaw_to_alaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Bina
   let mut out_buff = OwnedBinary::from_unowned(&buff).unwrap();
 
   for sample in out_buff.as_mut_slice() {
-    *sample = ulaw_to_alaw(*sample)
+    *sample = u_to_a(*sample)
   };
 
   Ok(Binary::from_owned(out_buff, env))
@@ -237,7 +247,7 @@ pub fn alaw_to_ulaw_buffer<'a>(env: Env<'a>, buff: Binary<'a>) -> NifResult<Bina
   let mut out_buff = OwnedBinary::from_unowned(&buff).unwrap();
 
   for sample in out_buff.as_mut_slice() {
-    *sample = alaw_to_ulaw(*sample)
+    *sample = a_to_u(*sample)
   };
 
   Ok(Binary::from_owned(out_buff, env))

@@ -4,40 +4,38 @@ defmodule Guppi.Media.Pipeline do
 
   @doc """
     TODO:
-      implement Audio Media & RTP sources & sinks -
-      take in parameters from SDP media, build session specifics and set up streams
+    - The pipeline is invalid right now, not any of its elements.
+    - The way this works, the address and port for the local sink needs to be set when we start the pipeline:
 
-    TODO:
-      we have to use PCMU. there's just no way around it. Opus is on the table too, but
-      the critical problem is converting the s16le samples to pcm_mulaw without breaking anything
+      Guppi.Media.Pipeline.start_link(%{
+          address: Guppi.Helpers.local_ip(),
+          port:    non_negative_integer(),
+          audio_device: todo!()
+        }
+      )
 
-    TODO:
-      add hook for injecting DTMF events (rfc2833/rfc4733) into the outbound RTP stream
+    - Need to build system for selecting and configuring which audio device it should use for streams
+
+    - Add hook for injecting DTMF events (rfc2833/rfc4733) into the outbound RTP stream
       This will likely be best done as another source element linked to the same RTP output pad
       as the audio itself
 
-    TODO:
-      rfc2833/rfc4733 internal table and respective payload definitios
+    - rfc2833/rfc4733 internal table and respective payload definitions
 
-    TODO:
-      specify media hardware ID somewhere. maybe accounts.json
-      can hold a ref to a host specific audio card ID that is hopefully pseudo consistent
-      (best case scenrio is indexed mic/spkr pairs)
-
-    TODO:
-      implement MOS aggregation based on RTCP events?
+    - implement MOS aggregation based on RTCP events?
   """
 
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(_) do
+  def handle_init(opts) do
+    %{endpoint_id: audio_device, l_addr: l_addr, l_port: l_port} = opts
 
     children = %{
       # Stream from file
       udp_source: %Membrane.UDP.Source{
-        local_port_no: 20000,
-        local_address: Guppi.Helpers.local_ip(),
+        local_port_no: l_port,
+        local_address: l_addr,
       },
       rtp: %Membrane.RTP.SessionBin{
         fmt_mapping: %{
@@ -54,7 +52,7 @@ defmodule Guppi.Media.Pipeline do
       |> to(:rtp)
     ]
 
-    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{}}
+    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{endpoint_id: audio_device}}
   end
 
   @impl true
@@ -66,13 +64,15 @@ defmodule Guppi.Media.Pipeline do
   @impl true
   def handle_notification({:new_rtp_stream, ssrc, 0, _extensions}, :rtp, _ctx, state) do
     state = Map.put(state, :audio, ssrc)
+
     actions = handle_stream(state)
+
     {{:ok, actions}, state}
   end
 
   @impl true
   def handle_notification({:new_rtp_stream, ssrc, 127, _extensions}, :rtp, _ctx, state) do
-    state = Map.put(state, :audio, ssrc)
+    state = Map.put(state, :audio_src, ssrc)
     actions = handle_stream(state)
     {{:ok, actions}, state}
   end
@@ -87,16 +87,18 @@ defmodule Guppi.Media.Pipeline do
     raise "Unsupported encoding: #{inspect(encoding_name)}"
   end
 
-  defp handle_stream(%{audio: audio_ssrc}) do
+  defp handle_stream(state) do
     spec = %ParentSpec{
       children: %{
         decoder: G711u.Decoder,
-        player: %Membrane.PortAudio.Sink{},
+        player: %Membrane.PortAudio.Sink{
+          endpoint_id: state.endpoint_id
+        },
         fake: Membrane.Fake.Sink.Buffers,
       },
       links: [
         link(:rtp)
-        |> via_out(Pad.ref(:output, audio: audio_ssrc))
+        |> via_out(Pad.ref(:output, audio_src: state.audio_ssrc))
         |> to(:decoder)
         |> to(:fake)
       ],
