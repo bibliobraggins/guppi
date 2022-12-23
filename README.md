@@ -16,9 +16,9 @@ example configuration:
       "uri":"sip:username@0.0.0.0:5060",
       "sip_user":"username",
       "sip_password":"**secret**",
-      "realm":"sbcrtp.b2.alianza.com",
+      "realm":"sip_provider.com",
       "sdp": {
-        "direction":"recvonly",
+        "direction":"sendrecv",
         "rtp_range":[20000, 40000],
         "codecs": {
           "g711u":"0:PCMU:8000:1",
@@ -29,7 +29,7 @@ example configuration:
       },
       "outbound_proxy":{
         "dns":"A",
-        "host":"sbcrtp.b2.sac.alianza.com",
+        "host":"proxy.sip_provider.com",
         "port":5065
       }
     }
