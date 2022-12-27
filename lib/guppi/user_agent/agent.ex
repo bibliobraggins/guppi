@@ -150,27 +150,34 @@ defmodule Guppi.Agent do
   def handle_cast({:invite, request, server_key}, agent) do
     Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
 
-    # we have to wrap this in a try because ExSDP is based on rfc4566, and does not support some parameters being sent by typical video phones
-    # and because of the way it's implemented it raises even when we call the version of the function that should not.
-    # unsupported params discovered:
-    # - sar-supported="#{supported_aspect_ratio_id}"
-
-    changeset = register_call(request.headers.call_id, agent)
-
-    sdp_string = to_string(Guppi.Media.fake_sdp()) |> inspect() |> Logger.debug()
+    # sdp_string = to_string(Guppi.Media.fake_sdp())
 
     case validate_offer(request.body) do
-      {:ok, sdp_offer} ->
+      {:ok, _sdp_offer} ->
 
-        Sippet.send(agent.transport, Message.to_response(request, 200))
-
-        final =
+        response =
           Message.to_response(request, 200)
-          |> Map.replace!(:body, sdp_string)
 
-        #{:ok, _sender_pid} = Guppi.TX_FIFO.start_link(tx_pipeline_options(sdp_offer))
+        #  Note on SDP: we need to generate an answer in an ACK or PRACK request
+        #  upon every 200 OK condition in the case of an INVITE/call
 
-        Sippet.send(agent.transport, final)
+        #  RFC 3261 13.2.2.4:
+        #  The UAC core MUST generate an ACK request for each 2xx received from
+        #  the transaction layer.  The header fields of the ACK are constructed
+        #  in the same way as for any request sent within a dialog (see Section
+        #  12) with the exception of the CSeq and the header fields related to
+        #  authentication.  The sequence number of the CSeq header field MUST be
+        #  the same as the INVITE being acknowledged, but the CSeq method MUST
+        #  be ACK.  The ACK MUST contain the same credentials as the INVITE.  If
+        #  the 2xx contains an offer (based on the rules above), the ACK MUST
+        #  carry an answer in its body.  If the offer in the 2xx response is not
+        #  acceptable, the UAC core MUST generate a valid answer in the ACK and
+        #  then send a BYE immediately.
+
+        Sippet.send(
+          agent.transport,
+          response
+        )
 
       {:error, error} ->
         {:error, error}
@@ -178,6 +185,11 @@ defmodule Guppi.Agent do
 
     # TODO: implement configurable validations?
     # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
+
+    # may need to consider breaking this out into an asynchronous condition. I'm thinking I'll build a "call" string that simply
+    # holds call state with respect to the internal agent and the remote agent
+
+    changeset = register_call(request.headers.call_id, agent)
 
     {:noreply, changeset}
   end
@@ -276,7 +288,7 @@ defmodule Guppi.Agent do
     try do
       sdp = ExSDP.parse!(body)
 
-      #IO.inspect(sdp)
+      # IO.inspect(sdp)
 
       {:ok, sdp}
     rescue
@@ -301,8 +313,12 @@ defmodule Guppi.Agent do
     Sippet.send(transport, provisional)
   end
 
-  defp tx_pipeline_options(sdp_offer) do
-    [map] = Enum.map(sdp_offer.media, fn %ExSDP.Media{} = media -> %{port: media.port, address: media.connection_data.address} end)
+  def tx_pipeline_options(sdp_offer) do
+    [map] =
+      Enum.map(sdp_offer.media, fn %ExSDP.Media{} = media ->
+        %{port: media.port, address: media.connection_data.address}
+      end)
+
     map
   end
 end

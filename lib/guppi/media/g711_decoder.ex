@@ -3,20 +3,27 @@ defmodule G711u.Decoder do
 
   require Logger
 
-  def_input_pad :input,
+  def_input_pad(
+    :input,
     availability: :always,
     demand_unit: :buffers,
     mode: :pull,
     caps: :any
+  )
 
-  def_output_pad :output,
+  def_output_pad(:output,
     mode: :pull,
     demand_unit: :buffers,
     caps: :any
+  )
 
   @impl true
   def handle_init(_) do
-    state = %{}
+    state = %{
+      interval: 1000,
+      counter: 0,
+      timer: nil
+    }
 
     {:ok, state}
   end
@@ -28,7 +35,8 @@ defmodule G711u.Decoder do
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    {:ok, state}
+    {:ok, timer} = :timer.send_interval(state.interval, :tick)
+    {:ok, %{state | timer: timer}}
   end
 
   @impl true
@@ -38,19 +46,20 @@ defmodule G711u.Decoder do
 
   @impl true
   def handle_process(:input, %Membrane.Buffer{} = buffer, _context, state) do
-    out_buff = G711.Native.compress_ulaw_buffer(buffer.payload)
+    out_buff = G7XX.Native.compress_ulaw_buffer(buffer.payload)
 
     {{:ok, buffer: {:output, Map.replace!(buffer, :payload, out_buff)}}, state}
   end
 
-  def handle_buffer(<<buffer :: bitstring()>>) do
+  def handle_buffer(<<buffer::bitstring>>) do
     output = <<>>
 
     handle_buffer(buffer, output)
   end
 
-  defp handle_buffer(<<sample :: size(16), in_buff :: bitstring()>>, out_buff) when is_bitstring(out_buff) do
-    output = <<out_buff <> <<G711.Native.ulaw_to_linear(sample)::16>> >>
+  defp handle_buffer(<<sample::size(16), in_buff::bitstring>>, out_buff)
+       when is_bitstring(out_buff) do
+    output = <<(out_buff <> <<G7XX.Native.ulaw_to_linear(sample)::16>>)>>
 
     handle_buffer(in_buff, output)
   end

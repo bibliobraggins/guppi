@@ -1,5 +1,4 @@
 defmodule Guppi.Media.Pipeline do
-
   require Logger
 
   @doc """
@@ -35,11 +34,11 @@ defmodule Guppi.Media.Pipeline do
       # Stream from file
       udp_source: %Membrane.UDP.Source{
         local_port_no: l_port,
-        local_address: l_addr,
+        local_address: l_addr
       },
       rtp: %Membrane.RTP.SessionBin{
         fmt_mapping: %{
-          0   => {:g711, 8_000},
+          0 => {:g711, 8_000},
           127 => {:telephone_event, 8_000}
         }
       }
@@ -52,7 +51,8 @@ defmodule Guppi.Media.Pipeline do
       |> to(:rtp)
     ]
 
-    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{endpoint_id: audio_device}}
+    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing},
+     %{endpoint_id: audio_device}}
   end
 
   @impl true
@@ -94,7 +94,7 @@ defmodule Guppi.Media.Pipeline do
         player: %Membrane.PortAudio.Sink{
           endpoint_id: state.endpoint_id
         },
-        fake: Membrane.Fake.Sink.Buffers,
+        fake: Membrane.Fake.Sink.Buffers
       },
       links: [
         link(:rtp)
@@ -107,5 +107,4 @@ defmodule Guppi.Media.Pipeline do
 
     [spec: spec]
   end
-
 end

@@ -1,6 +1,6 @@
 defmodule Guppi.Media do
   def sdp(account) do
-    ExSDP.new(
+    %ExSDP{
       version: 0,
       origin: [
         network_type: "IN",
@@ -8,7 +8,7 @@ defmodule Guppi.Media do
         session_id: Enum.random(0..131_070),
         session_version: 0
       ]
-    )
+    }
   end
 
   def fake_sdp() do
@@ -65,7 +65,6 @@ defmodule Guppi.Media do
       time_repeats: []
     }
   end
-
 
   def l16_8() do
     %ExSDP.Attribute.RTPMapping{
