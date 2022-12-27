@@ -1,8 +1,15 @@
 # Guppi
 
-**TODO: Add description**
-
 Guppi is intended as an RFC 3261 && 3263 compliant "phone".
+
+This project is a WIP, right now focus is on building out and abstracting SIP behavior.
+
+Features Planned: 
+- SIP call handling (wip)
+- codecs: G711, OPUS | (wip)
+- rfc3263 call server location (wip)
+- dtmf rfc2833/4733 (not started)
+- ATA device support via Nerves ( being considered )
 
 example configuration:
 ```
@@ -23,7 +30,6 @@ example configuration:
         "codecs": {
           "g711u":"0:PCMU:8000:1",
           "g711a":"8:PCMA:8000:1",
-          "L16_8":"117:L16.8:8000:1",
           "rfc2833":"127:telephone-event:8000:1"
         }
       },
