@@ -107,7 +107,7 @@ defmodule Guppi.Transport do
 
         state = %__MODULE__{
           socket: socket,
-          family: family,
+          family: :inet,
           sippet: name,
           proxy_host: proxy_host,
           proxy_port: proxy_port
@@ -171,8 +171,7 @@ defmodule Guppi.Transport do
 
       %Message{start_line: %RequestLine{}} ->
         Logger.debug([
-          "sending Request to #{stringify_hostport(to_host, to_port)}/udp",
-          ", #{inspect(key)}"
+          "sending Request to #{stringify_hostport(to_host, to_port)}/udp"
         ])
 
         with {:ok, to_ip} <- resolve_name(to_host, :inet),
@@ -181,7 +180,7 @@ defmodule Guppi.Transport do
         else
           {:error, reason} ->
             Logger.warn(
-              "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+              "udp transport error for #{stringify_hostport(to_host, to_port)}: #{inspect(reason)}"
             )
 
             if key != nil do
@@ -200,7 +199,7 @@ defmodule Guppi.Transport do
           :ok
         else
           {:error, reason} ->
-            Logger.warn("udp transport error for #{state.to_host}:#{to_port}: #{inspect(reason)}")
+            # Logger.warn("udp transport error for #{to_host}:#{to_port}: #{inspect(reason)}")
 
             if key != nil do
               Sippet.Router.receive_transport_error(state.sippet, key, reason)
@@ -220,9 +219,8 @@ defmodule Guppi.Transport do
     :gen_udp.close(socket)
   end
 
-  defp resolve_name(host, family) do
-    host
-    |> String.to_charlist()
+  def resolve_name(host, family) do
+    to_charlist(host)
     |> :inet.getaddr(family)
   end
 

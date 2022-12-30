@@ -12,11 +12,12 @@ defmodule Guppi.Account do
     :display_name,
     :registrar,
     :transport,
+    :registration_timer,
+    :max_forwards,
     :realm,
     :proxy,
     :local_sdp,
     :uri,
-    :max_forwards,
     :digit_map,
     :primary_dns,
     :allow,
@@ -62,9 +63,6 @@ defmodule Guppi.Account do
           raise ArgumentError, "Invalid uri provided: #{inspect(reason)}"
       end
 
-    id = parsed_uri.userinfo |> String.to_atom()
-
-    Map.put_new(account, :name, id)
-    |> Map.replace!(:uri, parsed_uri)
+    Map.replace!(account, :uri, parsed_uri)
   end
 end

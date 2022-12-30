@@ -20,15 +20,18 @@ defmodule Guppi do
   end
 
   defp init_accounts() do
-    Enum.into(
-      Guppi.Account.read_config!(),
-      [],
-      fn account ->
-        Supervisor.child_spec({Guppi.Agent, account},
-          id: {Integer.to_string(account.uri.port), account.uri.userinfo}
-        )
-      end
-    )
+    children =
+      Enum.into(
+        Guppi.Account.read_config!(),
+        [],
+        fn account ->
+          Supervisor.child_spec({Guppi.Agent, account},
+            id: {Integer.to_string(account.uri.port), account.uri.userinfo}
+          )
+        end
+      )
+
+    [Guppi.Calls | children]
   end
 
   def restart do

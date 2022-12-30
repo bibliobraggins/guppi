@@ -32,22 +32,18 @@ defmodule Guppi.Agent do
         end
       end
 
-    # start sippet instance based on sip user data
-    {:ok, sippet} = Sippet.start_link(name: transport_name)
+    children = [
+      {Sippet, name: transport_name},
+      {Guppi.Transport,
+       name: transport_name,
+       address: Guppi.Helpers.local_ip!(),
+       port: account.uri.port,
+       proxy: proxy}
+    ]
 
-    # build a
-    {:ok, _transport_pid} =
-      case account.transport do
-        "udp" ->
-          Guppi.Transport.start_link(
-            name: transport_name,
-            address: Guppi.Helpers.local_ip!(),
-            port: account.uri.port,
-            proxy: proxy
-          )
-      end
+    Supervisor.start_link(children, strategy: :one_for_one)
 
-    # register the core process - everything is one per "user"
+    # declare process module handling inbound messages
     Sippet.register_core(transport_name, Guppi.Core)
 
     # silly mechanism to catch next agent state
@@ -60,18 +56,17 @@ defmodule Guppi.Agent do
           :idle
       end
 
-    # run the agent GenServer
+    # start the SIP agent
     GenServer.start_link(
       __MODULE__,
       %{
         account: account,
         state: init_state,
-        sippet: sippet,
         transport: transport_name,
-        calls: [],
+        name: String.to_atom(account.uri.userinfo),
         cseq: 0
       },
-      name: account.name
+      name: String.to_atom(account.uri.userinfo)
     )
   end
 
@@ -118,7 +113,7 @@ defmodule Guppi.Agent do
         []
       )
 
-    case Sippet.send(agent.transport, update_branch(auth_request)) do
+    case Sippet.send(agent.transport, update_via(auth_request)) do
       :ok ->
         {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
 
@@ -151,12 +146,9 @@ defmodule Guppi.Agent do
     Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
 
     # sdp_string = to_string(Guppi.Media.fake_sdp())
-
     case validate_offer(request.body) do
-      {:ok, _sdp_offer} ->
-
-        response =
-          Message.to_response(request, 200)
+      _sdp = %ExSDP{} ->
+        response = Message.to_response(request, 200)
 
         #  Note on SDP: we need to generate an answer in an ACK or PRACK request
         #  upon every 200 OK condition in the case of an INVITE/call
@@ -179,19 +171,22 @@ defmodule Guppi.Agent do
           response
         )
 
-      {:error, error} ->
-        {:error, error}
+        register_call(
+          request.headers.call_id,
+          request.headers.from,
+          request.headers.to,
+          request.headers.via
+        )
+
+        send_ack(request.headers.call_id, agent)
+
+        {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
+
+      {:error, reason} ->
+        Logger.warn("could not handle incoming call: #{reason} ")
+
+        {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
     end
-
-    # TODO: implement configurable validations?
-    # TODO: implement offer/answer via sdp media in reply. this is the critical and final validation. for now we simply accept the session
-
-    # may need to consider breaking this out into an asynchronous condition. I'm thinking I'll build a "call" string that simply
-    # holds call state with respect to the internal agent and the remote agent
-
-    changeset = register_call(request.headers.call_id, agent)
-
-    {:noreply, changeset}
   end
 
   @impl true
@@ -215,36 +210,22 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:cancel, _request, _key}, agent) do
+  def handle_cast({:cancel, request, _key}, agent) do
+    response_code = drop_call(request.headers.call_id)
+
+    Sippet.send(agent.transport, Message.to_response(request, response_code))
+
     {:noreply, agent}
   end
 
   # we need to remove the call from our tracked calls and send a 200 on those cases.
   @impl true
-  def handle_cast({:bye, request, client_key}, agent) do
-    changeset =
-      case Enum.member?(agent.calls, request.headers.call_id) do
-        true ->
-          Logger.debug("BYE is valid, closing Call: #{request.headers.call_id}")
-          # TODO: tear down call resource in future media engine
-          Sippet.send(agent.transport, Message.to_response(request, 200))
+  def handle_cast({:bye, request, _client_key}, agent) do
+    response_code = drop_call(request.headers.call_id)
 
-          Map.update!(
-            agent,
-            :calls,
-            fn calls -> List.delete(calls, request.headers.call_id) end
-          )
+    Sippet.send(agent.transport, Message.to_response(request, response_code))
 
-        false ->
-          Logger.warning(
-            "Got BYE for a call we don't recognize\nkey: #{inspect(client_key)}\ncall: #{request.headers.call_id}"
-          )
-
-          Sippet.send(agent.transport, Message.to_response(request, 481))
-          agent
-      end
-
-    {:noreply, changeset}
+    {:noreply, agent}
   end
 
   @impl true
@@ -255,23 +236,34 @@ defmodule Guppi.Agent do
     Logger.warn("WHY DID MY GENSERVER STOP")
   end
 
-  defp register_call(call_id, agent) do
-    case Enum.member?(agent.calls, call_id) do
-      false ->
-        Map.update!(
-          agent,
-          :calls,
-          fn calls -> List.insert_at(calls, length(calls), call_id) end
-        )
+  defp register_call(call_id, from, to, via) do
+    Guppi.Calls.create(call_id, from, to, via)
+  end
 
+  defp drop_call(call_id) do
+    case Enum.member?(Guppi.Calls.show(), call_id) do
       true ->
-        agent
+        Guppi.Calls.delete(call_id)
+        200
+
+      false ->
+        488
     end
+  end
+
+  def send_ack(call_id, agent) do
+    call = %Guppi.Call{} = Guppi.Calls.get(call_id)
+
+    ack = Guppi.Requests.ack(agent.account, agent.cseq, call)
+
+    # Logger.warn(Message.valid?(ack))
+
+    Sippet.send(agent.transport, ack)
   end
 
   # updates cseq, via, and from headers for a given request.
   # appropriate for authentication challenges. may be useful elsewhere.
-  defp update_branch(request) do
+  defp update_via(request) do
     request
     |> Message.update_header(:cseq, fn {seq, method} ->
       {seq + 1, method}
@@ -288,9 +280,7 @@ defmodule Guppi.Agent do
     try do
       sdp = ExSDP.parse!(body)
 
-      # IO.inspect(sdp)
-
-      {:ok, sdp}
+      sdp
     rescue
       error ->
         Logger.warn(

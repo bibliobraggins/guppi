@@ -50,8 +50,8 @@ defmodule Guppi.Helpers do
     c=IN IP4 #{account.uri.host}
     t=0 0
     a=sendrecv
-    m=audio #{Enum.random(20000..40000)} RTP/AVP 0 127
-    a=rtpmap:0 PCMU/8000
+    m=audio 20000 RTP/AVP 121 127
+    a=rtpmap:121 OPUS/48000
     a=rtpmap:127 telephone-event/8000
     """
   end

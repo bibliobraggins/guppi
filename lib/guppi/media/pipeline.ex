@@ -27,18 +27,16 @@ defmodule Guppi.Media.Pipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(opts) do
-    %{endpoint_id: audio_device, l_addr: l_addr, l_port: l_port} = opts
-
+  def handle_init(_opts) do
     children = %{
       # Stream from file
-      udp_source: %Membrane.UDP.Source{
-        local_port_no: l_port,
-        local_address: l_addr
+      socket: %Membrane.UDP.Source{
+        local_port_no: 20000,
+        local_address: {192, 168, 0, 193}
       },
       rtp: %Membrane.RTP.SessionBin{
         fmt_mapping: %{
-          0 => {:g711, 8_000},
+          120 => {:OPUS, 48_000},
           127 => {:telephone_event, 8_000}
         }
       }
@@ -51,8 +49,7 @@ defmodule Guppi.Media.Pipeline do
       |> to(:rtp)
     ]
 
-    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing},
-     %{endpoint_id: audio_device}}
+    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{}}
   end
 
   @impl true
@@ -62,11 +59,9 @@ defmodule Guppi.Media.Pipeline do
   end
 
   @impl true
-  def handle_notification({:new_rtp_stream, ssrc, 0, _extensions}, :rtp, _ctx, state) do
+  def handle_notification({:new_rtp_stream, ssrc, 120, _extensions}, :rtp, _ctx, state) do
     state = Map.put(state, :audio, ssrc)
-
     actions = handle_stream(state)
-
     {{:ok, actions}, state}
   end
 
@@ -90,17 +85,17 @@ defmodule Guppi.Media.Pipeline do
   defp handle_stream(state) do
     spec = %ParentSpec{
       children: %{
-        decoder: G711u.Decoder,
-        player: %Membrane.PortAudio.Sink{
-          endpoint_id: state.endpoint_id
-        },
+        audio_decoder: Membrane.Opus.Decoder,
+        player: %Membrane.PortAudio.Sink{},
         fake: Membrane.Fake.Sink.Buffers
       },
       links: [
         link(:rtp)
-        |> via_out(Pad.ref(:output, audio_src: state.audio_ssrc))
-        |> to(:decoder)
-        |> to(:fake)
+        |> via_out(Pad.ref(:output, state.audio_ssrc),
+          options: [depayloader: RTP.Opus.Depayloader]
+        )
+        |> to(:audio_decoder)
+        |> to(:audio_player)
       ],
       stream_sync: :sinks
     }

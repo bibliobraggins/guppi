@@ -48,16 +48,14 @@ defmodule Guppi.Media do
           },
           attributes: [
             %ExSDP.Attribute.RTPMapping{
-              payload_type: 0,
-              encoding: "G711",
-              clock_rate: 8000,
-              params: 1
+              payload_type: 120,
+              encoding: "OPUS",
+              clock_rate: 48000
             },
             %ExSDP.Attribute.RTPMapping{
               payload_type: 127,
               encoding: "telephone-event",
-              clock_rate: 8000,
-              params: 1
+              clock_rate: 8000
             }
           ]
         }

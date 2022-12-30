@@ -39,3 +39,5 @@ resources
 target/
 
 priv/native
+
+*.sip
