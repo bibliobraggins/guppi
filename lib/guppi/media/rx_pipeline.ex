@@ -1,4 +1,4 @@
-defmodule Guppi.Media.Pipeline do
+defmodule Guppi.Media.RxPipeline do
   require Logger
 
   @doc """
@@ -24,50 +24,38 @@ defmodule Guppi.Media.Pipeline do
     - implement MOS aggregation based on RTCP events?
   """
 
+  alias Membrane.{Opus, RTP, UDP}
+
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(_opts) do
-    children = %{
-      # Stream from file
-      socket: %Membrane.UDP.Source{
-        local_port_no: 20000,
-        local_address: {192, 168, 0, 193}
-      },
-      rtp: %Membrane.RTP.SessionBin{
-        fmt_mapping: %{
-          120 => {:OPUS, 48_000},
-          127 => {:telephone_event, 8_000}
+  def handle_init(_) do
+
+    spec = %ParentSpec{
+      children: [
+        audio_src: %UDP.Source{
+          local_address: Guppi.Helpers.local_ip(),
+          local_port_no: 20000
+        },
+        rtp: %RTP.SessionBin{
+          srtp_policies: [
+          ],
+          fmt_mapping: %{
+            121 => {:OPUS, 48_000}
+          }
         }
-      }
+      ],
+      links: [
+        link(:audio_src) |> via_in(:rtp_input) |> to(:rtp)
+      ]
     }
 
-    # Setup the flow of the data
-    links = [
-      link(:udp_source)
-      |> via_in(Pad.ref(:rtp_input))
-      |> to(:rtp)
-    ]
-
-    {{:ok, spec: %ParentSpec{children: children, links: links}, playback: :playing}, %{}}
+    {{:ok, spec: spec, playback: :playing}, %{}}
   end
 
   @impl true
-  def handle_notification({:connection_info, _host, _port}, :udp_source, _ctx, state) do
-    Logger.info("Audio UDP source connected.")
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_notification({:new_rtp_stream, ssrc, 120, _extensions}, :rtp, _ctx, state) do
+  def handle_notification({:new_rtp_stream, ssrc, 121, _extensions}, :rtp, _ctx, state) do
     state = Map.put(state, :audio, ssrc)
-    actions = handle_stream(state)
-    {{:ok, actions}, state}
-  end
-
-  @impl true
-  def handle_notification({:new_rtp_stream, ssrc, 127, _extensions}, :rtp, _ctx, state) do
-    state = Map.put(state, :audio_src, ssrc)
     actions = handle_stream(state)
     {{:ok, actions}, state}
   end
@@ -82,16 +70,23 @@ defmodule Guppi.Media.Pipeline do
     raise "Unsupported encoding: #{inspect(encoding_name)}"
   end
 
-  defp handle_stream(state) do
+  @impl true
+  def handle_notification({:connection_info, _r_addr, _port}, :audio_src, _ctx, state) do
+    Logger.info("Audio UDP source connected.")
+
+    {:ok, state}
+  end
+
+  defp handle_stream(%{audio: audio_ssrc}) do
+
     spec = %ParentSpec{
       children: %{
-        audio_decoder: Membrane.Opus.Decoder,
-        player: %Membrane.PortAudio.Sink{},
-        fake: Membrane.Fake.Sink.Buffers
+        audio_decoder: Opus.Decoder,
+        audio_player: Membrane.PortAudio.Sink
       },
       links: [
         link(:rtp)
-        |> via_out(Pad.ref(:output, state.audio_ssrc),
+        |> via_out(Pad.ref(:output, audio_ssrc),
           options: [depayloader: RTP.Opus.Depayloader]
         )
         |> to(:audio_decoder)

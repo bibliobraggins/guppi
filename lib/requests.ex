@@ -53,7 +53,6 @@ defmodule Guppi.Requests do
       },
       body: Guppi.Helpers.local_sdp!(account)
     }
-    |> IO.inspect()
   end
 
 end

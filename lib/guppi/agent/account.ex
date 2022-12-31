@@ -5,31 +5,29 @@ defmodule Guppi.Account do
 
   alias Sippet.URI, as: URI
 
-  defstruct [
-    :register,
-    :name,
-    :extension,
-    :display_name,
-    :registrar,
-    :transport,
-    :registration_timer,
-    :max_forwards,
-    :realm,
-    :proxy,
-    :local_sdp,
-    :uri,
-    :digit_map,
-    :primary_dns,
-    :allow,
-    :secondary_dns,
-    :sip_user,
-    :sip_password,
-    :sip_server_1,
-    :sip_server_2,
-    :outbound_proxy,
-    :sdp,
-    :certificates
-  ]
+  defstruct name: nil,
+    register: nil,
+    extension: nil,
+    display_name: nil,
+    registrar: nil,
+    transport: nil,
+    registration_timer: nil,
+    max_forwards: nil,
+    realm: nil,
+    proxy: nil,
+    local_sdp: nil,
+    uri: nil,
+    digit_map: nil,
+    primary_dns: nil,
+    allow: nil,
+    secondary_dns: nil,
+    sip_user: nil,
+    sip_password: nil,
+    sip_server_1: nil,
+    sip_server_2: nil,
+    outbound_proxy: nil,
+    sdp: nil,
+    certificate: nil
 
   # @defaults %{}
 

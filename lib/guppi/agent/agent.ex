@@ -147,7 +147,7 @@ defmodule Guppi.Agent do
 
     # sdp_string = to_string(Guppi.Media.fake_sdp())
     case validate_offer(request.body) do
-      _sdp = %ExSDP{} ->
+      sdp_offer = %ExSDP{} ->
         response = Message.to_response(request, 200)
 
         #  Note on SDP: we need to generate an answer in an ACK or PRACK request
@@ -178,7 +178,7 @@ defmodule Guppi.Agent do
           request.headers.via
         )
 
-        send_ack(request.headers.call_id, agent)
+        ack_call(request.headers.call_id, agent, sdp_offer)
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
 
@@ -251,7 +251,7 @@ defmodule Guppi.Agent do
     end
   end
 
-  def send_ack(call_id, agent) do
+  def ack_call(call_id, agent, sdp_offer) do
     call = %Guppi.Call{} = Guppi.Calls.get(call_id)
 
     ack = Guppi.Requests.ack(agent.account, agent.cseq, call)
@@ -259,6 +259,8 @@ defmodule Guppi.Agent do
     # Logger.warn(Message.valid?(ack))
 
     Sippet.send(agent.transport, ack)
+
+    Guppi.Media.RxPipeline.start_link(sdp_offer)
   end
 
   # updates cseq, via, and from headers for a given request.
@@ -293,14 +295,6 @@ defmodule Guppi.Agent do
 
   def status(username) do
     GenServer.call(username, :status)
-  end
-
-  def send_ringing_response(request, transport, sdp_string) do
-    provisional =
-      Message.to_response(request, 183)
-      |> Map.replace!(:body, sdp_string)
-
-    Sippet.send(transport, provisional)
   end
 
   def tx_pipeline_options(sdp_offer) do
