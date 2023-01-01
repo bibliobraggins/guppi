@@ -1,11 +1,18 @@
 defmodule Guppi.Requests do
 
+  alias Guppi.Account, as: Account
+
   alias Sippet.Message, as: Message
   alias Sippet.URI, as: URI
   alias Sippet.Message.RequestLine, as: RequestLine
   #alias Sippet.Message.StatusLine, as: StatusLine
 
-  def register(account = %Guppi.Account{}, cseq) do
+  @moduledoc """
+    here we store references to most if not all the request building.
+  """
+
+  @spec register(%Account{register: true}, cseq :: non_neg_integer()) :: %Message{start_line: %RequestLine{method: :register}}
+  def register(account = %Account{}, cseq) do
     %Message{
       start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.realm}"),
       headers: %{
@@ -31,7 +38,8 @@ defmodule Guppi.Requests do
     }
   end
 
-  def ack(account = %Guppi.Account{}, cseq, call = %Guppi.Call{}) do
+  @spec ack(%Account{}, cseq :: non_neg_integer(), %Guppi.Call{}) :: %Message{start_line: %RequestLine{method: :ack}}
+  def ack(account, cseq, call) do
     %Message{
       start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.uri.host}"),
       headers: %{

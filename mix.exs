@@ -44,6 +44,7 @@ defmodule Guppi.MixProject do
       {:membrane_wav_plugin, "~> 0.7.0"},
       {:membrane_ffmpeg_swresample_plugin, "<= 0.16.0"},
       {:membrane_fake_plugin, "~> 0.8.0"},
+      {:dialyxir, "~> 1.2"},
       {:g7xx_plugin, git: "https://github.com/bibliobraggins/g7xx_plugin.git"}
 
       # {:dep_from_hexpm, "~> 0.3.0"},
