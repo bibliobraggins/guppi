@@ -1,17 +1,10 @@
-defmodule Guppi.Media do
-  def sdp(account) do
-    %ExSDP{
-      version: 0,
-      origin: [
-        network_type: "IN",
-        address: :inet_parse.address(account.uri.host),
-        session_id: Enum.random(0..131_070),
-        session_version: 0
-      ]
-    }
-  end
+defmodule Guppi.Agent.Media do
 
-  def fake_sdp() do
+  alias Guppi.Account, as: Account
+
+  def sdp(account = %Account{}, _offer) do
+    # todo: add conditions for best candidate selection, instead of static codec offering
+
     %ExSDP{
       version: 0,
       session_name: "Guppi_#{Enum.random(0..65_535)}",
@@ -20,16 +13,7 @@ defmodule Guppi.Media do
         network_type: "IN",
         session_id: Enum.random(0..65_535),
         session_version: 0,
-        address: Guppi.Helpers.local_ip()
-      },
-      timing: %ExSDP.Timing{
-        start_time: 0,
-        stop_time: 0
-      },
-      time_zones_adjustments: nil,
-      connection_data: %ExSDP.ConnectionData{
-        address: Guppi.Helpers.local_ip(),
-        network_type: "IN"
+        address:  Socket.Address.parse(account.uri.host)
       },
       attributes: [:sendrecv],
       bandwidth: [],
@@ -38,17 +22,17 @@ defmodule Guppi.Media do
           type: :audio,
           port: 20000,
           protocol: "RTP/AVP",
-          fmt: [10],
+          fmt: [0],
           port_count: 1,
           connection_data: %ExSDP.ConnectionData{
-            address: Guppi.Helpers.local_ip(),
+            address:  Socket.Address.parse(account.uri.host),
             address_count: nil,
             ttl: nil,
             network_type: "IN"
           },
           attributes: [
             %ExSDP.Attribute.RTPMapping{
-              payload_type: 120,
+              payload_type: 121,
               encoding: "OPUS",
               clock_rate: 48000
             },

@@ -1,4 +1,4 @@
-defmodule Guppi.Media.RxPipeline do
+defmodule Guppi.Media.TxPipeline do
   require Logger
 
   use Membrane.Pipeline

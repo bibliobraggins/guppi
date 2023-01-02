@@ -3,6 +3,10 @@ defmodule Guppi.Agent do
 
   require Logger
 
+  alias Guppi.Requests, as: Requests
+  alias Guppi.RegisterTimer, as: RegisterTimer
+  alias Guppi.Agent.Media, as: Media
+
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
   alias Sippet.Message.StatusLine, as: StatusLine
@@ -11,6 +15,9 @@ defmodule Guppi.Agent do
   @moduledoc """
 
   """
+
+
+
   def start_link(account) do
     transport_name = account.uri.port |> to_charlist() |> List.to_atom()
 
@@ -82,7 +89,7 @@ defmodule Guppi.Agent do
     case agent.state do
       :register ->
         # GenServer.cast(self(), :register)
-        Guppi.Register.start_link(agent)
+        RegisterTimer.start_link(agent)
         {:ok, agent}
 
       _ ->
@@ -98,7 +105,7 @@ defmodule Guppi.Agent do
     request =
       case cseq do
         {_, :register} ->
-          Guppi.Register.make_register(agent)
+          RegisterTimer.make_register(agent)
 
         _ ->
           raise RuntimeError,
@@ -131,7 +138,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_info(:register, agent) do
-    Sippet.send(agent.transport, Guppi.Register.make_register(agent))
+    Sippet.send(agent.transport, Requests.register(agent.account, agent.cseq))
 
     {:noreply, agent}
   end
@@ -171,7 +178,7 @@ defmodule Guppi.Agent do
           response
         )
 
-        register_call(
+        create_call(
           request.headers.call_id,
           request.headers.from,
           request.headers.to,
@@ -229,15 +236,31 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_call(:status, _caller, agent), do: {:reply, agent, agent}
+  def handle_call(:state, _caller, agent), do: {:reply, agent, agent}
 
   @impl true
   def terminate(_, _) do
     Logger.warn("WHY DID MY GENSERVER STOP")
   end
 
-  defp register_call(call_id, from, to, via) do
+  def create_sdp(account, offer) do
+    Media.sdp(account, offer)
+  end
+
+  defp create_call(call_id, from, to, via) do
     Guppi.Calls.create(call_id, from, to, via)
+  end
+
+  defp ack_call(call_id, agent, sdp_offer) do
+    call = %Guppi.Call{} = Guppi.Calls.get(call_id)
+
+    ack = Guppi.Requests.ack(agent.account, agent.cseq, call)
+
+    # Logger.warn(Message.valid?(ack))
+
+    Sippet.send(agent.transport, ack)
+
+    Guppi.Media.RxPipeline.start_link(sdp_offer)
   end
 
   defp drop_call(call_id) do
@@ -249,18 +272,6 @@ defmodule Guppi.Agent do
       false ->
         488
     end
-  end
-
-  def ack_call(call_id, agent, sdp_offer) do
-    call = %Guppi.Call{} = Guppi.Calls.get(call_id)
-
-    ack = Guppi.Requests.ack(agent.account, agent.cseq, call)
-
-    # Logger.warn(Message.valid?(ack))
-
-    Sippet.send(agent.transport, ack)
-
-    Guppi.Media.RxPipeline.start_link(sdp_offer)
   end
 
   # updates cseq, via, and from headers for a given request.
@@ -280,9 +291,7 @@ defmodule Guppi.Agent do
 
   defp validate_offer(body) do
     try do
-      sdp = ExSDP.parse!(body)
-
-      sdp
+      ExSDP.parse!(body)
     rescue
       error ->
         Logger.warn(
@@ -293,8 +302,8 @@ defmodule Guppi.Agent do
     end
   end
 
-  def status(username) do
-    GenServer.call(username, :status)
+  def state(username) do
+    GenServer.call(username, :state)
   end
 
   def tx_pipeline_options(sdp_offer) do
@@ -305,4 +314,5 @@ defmodule Guppi.Agent do
 
     map
   end
+
 end
