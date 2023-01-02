@@ -38,8 +38,8 @@ defmodule Guppi.Requests do
     }
   end
 
-  @spec ack(%Account{}, cseq :: non_neg_integer(), %Guppi.Call{}) :: %Message{start_line: %RequestLine{method: :ack}}
-  def ack(account, cseq, call) do
+  @spec ack(%Account{}, cseq :: non_neg_integer(), %Guppi.Call{}, ExSDP.t()) :: %Message{start_line: %RequestLine{method: :ack}}
+  def ack(account, cseq, call, sdp_offer) do
     %Message{
       start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.uri.host}"),
       headers: %{
@@ -59,7 +59,7 @@ defmodule Guppi.Requests do
         user_agent: "Guppi/0.1.0",
         call_id: call.id,
       },
-      body: Guppi.Helpers.local_sdp!(account)
+      body: to_string(Guppi.Agent.Media.sdp(account, sdp_offer))
     }
   end
 

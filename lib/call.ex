@@ -1,4 +1,16 @@
 defmodule Guppi.Call do
+
+  @moduledoc """
+    This module defines the datastructure for call handling.
+
+    A Call is a Struct with a particular primary id that references
+    a GenServer that can handle media pipeline events as they come in
+    and adjust media settings accordingly.
+
+    All media selection, ie which audio card to use, is handled in Guppi.Agent.Media,
+    based on the input Account data
+  """
+
   defstruct [
     :id,
     :from,

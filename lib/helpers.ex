@@ -40,22 +40,6 @@ defmodule Guppi.Helpers do
     Enum.join(Tuple.to_list(ip), ".")
   end
 
-  def uri!(cfg) when is_map(cfg), do: struct!(Sippet.URI, cfg)
-
-  def local_sdp!(account) do
-    """
-    v=0
-    o=- 1 1 IN IP4 #{account.uri.host}
-    s=0
-    c=IN IP4 #{account.uri.host}
-    t=0 0
-    a=sendrecv
-    m=audio 20000 RTP/AVP 121 127
-    a=rtpmap:121 OPUS/48000
-    a=rtpmap:127 telephone-event/8000
-    """
-  end
-
   def measure(function) do
     function
     |> :timer.tc()

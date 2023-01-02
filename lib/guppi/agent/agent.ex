@@ -5,7 +5,6 @@ defmodule Guppi.Agent do
 
   alias Guppi.Requests, as: Requests
   alias Guppi.RegisterTimer, as: RegisterTimer
-  alias Guppi.Agent.Media, as: Media
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
@@ -13,10 +12,16 @@ defmodule Guppi.Agent do
   alias Sippet.DigestAuth, as: DigestAuth
 
   @moduledoc """
+    This Module spawns a process that behaves as a "SIP Agent" or SIP aware element,
+    and makes it referencable as a named GenServer.
 
+    The idea here is that an Agent will grandually "construct" a %Call{}
+    as it processes SIP messages.
+
+    Other interactions like BLF and MWI, and location Registration are possible too.
+
+    Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
-
-
 
   def start_link(account) do
     transport_name = account.uri.port |> to_charlist() |> List.to_atom()
@@ -243,10 +248,6 @@ defmodule Guppi.Agent do
     Logger.warn("WHY DID MY GENSERVER STOP")
   end
 
-  def create_sdp(account, offer) do
-    Media.sdp(account, offer)
-  end
-
   defp create_call(call_id, from, to, via) do
     Guppi.Calls.create(call_id, from, to, via)
   end
@@ -254,13 +255,13 @@ defmodule Guppi.Agent do
   defp ack_call(call_id, agent, sdp_offer) do
     call = %Guppi.Call{} = Guppi.Calls.get(call_id)
 
-    ack = Guppi.Requests.ack(agent.account, agent.cseq, call)
+    ack = Guppi.Requests.ack(agent.account, agent.cseq, call, sdp_offer)
 
-    # Logger.warn(Message.valid?(ack))
+    Logger.debug("Valid Message? #{call_id}:\t", Message.valid?(ack))
+
+
 
     Sippet.send(agent.transport, ack)
-
-    Guppi.Media.RxPipeline.start_link(sdp_offer)
   end
 
   defp drop_call(call_id) do
