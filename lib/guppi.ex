@@ -2,7 +2,9 @@ defmodule Guppi do
   require Logger
 
   @moduledoc """
-    The Guppi Application module
+    The main Guppi interface module.
+
+    Later, there will be client side helper functions for
   """
 
   def start, do: start_link(nil)

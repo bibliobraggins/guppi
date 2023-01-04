@@ -30,7 +30,6 @@ defmodule Guppi.Media.RxPipeline do
 
   @impl true
   def handle_init(_) do
-
     spec = %ParentSpec{
       children: [
         audio_src: %UDP.Source{
@@ -38,8 +37,7 @@ defmodule Guppi.Media.RxPipeline do
           local_port_no: 20000
         },
         rtp: %RTP.SessionBin{
-          srtp_policies: [
-          ],
+          srtp_policies: [],
           fmt_mapping: %{
             121 => {:OPUS, 48_000}
           }
@@ -78,7 +76,6 @@ defmodule Guppi.Media.RxPipeline do
   end
 
   defp handle_stream(%{audio: audio_ssrc}) do
-
     spec = %ParentSpec{
       children: %{
         audio_decoder: Opus.Decoder,

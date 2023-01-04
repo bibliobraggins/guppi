@@ -1,5 +1,4 @@
 defmodule Guppi.Call do
-
   @moduledoc """
     This module defines the datastructure for call handling.
 
@@ -18,7 +17,9 @@ defmodule Guppi.Call do
     :via
   ]
 
-  def new(call_id, {from_name, from_uri, from_tag}, {to_name, to_uri, to_tag}, [{_v, transport, origin, %{"branch" => branch}} | _rest]) do
+  def new(call_id, {from_name, from_uri, from_tag}, {to_name, to_uri, to_tag}, [
+        {_v, transport, origin, %{"branch" => branch}} | _rest
+      ]) do
     case from_tag do
       %{} -> %{}
     end
@@ -42,5 +43,4 @@ defmodule Guppi.Call do
       }
     }
   end
-
 end

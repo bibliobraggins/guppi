@@ -5,7 +5,7 @@ defmodule Guppi.Media.TxPipeline do
 
   @impl true
   def handle_init(sdp = %ExSDP{}) do
-    audio_ssrc = 10101010
+    audio_ssrc = 10_101_010
 
     children = %{
       # Stream from file
@@ -14,7 +14,7 @@ defmodule Guppi.Media.TxPipeline do
       audio_parser: %Membrane.Opus.Parser{input_delimitted?: true, delimitation: :undelimit},
       rtp: %Membrane.RTP.SessionBin{
         fmt_mapping: %{
-          121  => {Opus, 48_000},
+          121 => {Opus, 48_000}
         }
       },
       audio_realtimer: Membrane.Realtimer,

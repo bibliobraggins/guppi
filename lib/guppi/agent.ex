@@ -259,8 +259,6 @@ defmodule Guppi.Agent do
 
     Logger.debug("Valid Message? #{call_id}:\t", Message.valid?(ack))
 
-
-
     Sippet.send(agent.transport, ack)
   end
 
@@ -315,5 +313,4 @@ defmodule Guppi.Agent do
 
     map
   end
-
 end
