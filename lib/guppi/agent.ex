@@ -127,7 +127,7 @@ defmodule Guppi.Agent do
 
     case Sippet.send(agent.transport, update_via(auth_request)) do
       :ok ->
-        {:noreply, Map.put_new(agent, :cseq, agent.cseq + 1)}
+        {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
 
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
@@ -205,9 +205,14 @@ defmodule Guppi.Agent do
   def handle_cast({:notify, request, _key}, agent) do
     Logger.debug("#{request.start_line.method}: #{inspect(request.body)}")
 
+    String.trim(request.body)
+    |> String.split("\r\n")
+    |> Enum.into([], fn x -> (String.trim(x) |> String.split(":")) end)
+    |> IO.inspect()
+
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
-    {:noreply, agent}
+    {:noreply, Map.put_new(agent, :mwi, [read: 0, unread: 0])}
   end
 
   @impl true
