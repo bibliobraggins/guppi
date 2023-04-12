@@ -3,21 +3,18 @@ defmodule Guppi do
 
   @moduledoc """
     The main Guppi interface module.
-
-    Later, there will be client side helper functions for
   """
 
   def start, do: start_link(nil)
 
   def start_link(_) do
-    Registry.start_link(keys: :unique, name: Guppi.Registry)
-
     children = init_accounts()
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
   end
 
-  def stop do
+  def stop, do: stop(:normal)
+  def stop(:normal) do
     Supervisor.stop(__MODULE__, :normal)
   end
 
@@ -28,16 +25,19 @@ defmodule Guppi do
         [],
         fn account ->
           Supervisor.child_spec({Guppi.Agent, account},
-            id: {Integer.to_string(account.uri.port), account.uri.userinfo}
+            id: {Integer.to_string(account.uri.port), account.uri.userinfo},
+            restart: :transient
           )
         end
       )
+
+    Registry.start_link(keys: :unique, name: Guppi.Registry)
 
     [Guppi.Calls | children]
   end
 
   def restart do
-    stop()
+    stop(:normal)
     Process.sleep(5)
     start()
   end

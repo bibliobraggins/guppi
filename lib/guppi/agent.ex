@@ -14,43 +14,25 @@ defmodule Guppi.Agent do
   @moduledoc """
     This Module spawns a process that behaves as a "SIP Agent" or SIP aware element,
     and makes it referencable as a named GenServer.
-
-    The idea here is that an Agent will grandually "construct" a %Call{}
+    The idea here is that an Agent will gradually "construct" a %Call{}
     as it processes SIP messages.
-
     Other interactions like BLF and MWI, and location Registration are possible too.
-
     Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
 
   def start_link(account) do
-    transport_name = account.uri.port |> to_charlist() |> List.to_atom()
-
-    proxy =
-      with true <- Map.has_key?(account, :outbound_proxy),
-           true <- Map.has_key?(account.outbound_proxy, :dns) do
-        case account.outbound_proxy.dns do
-          "A" ->
-            {account.outbound_proxy.host, account.outbound_proxy.port}
-
-          "SRV" ->
-            raise ArgumentError, "Cannot use SRV records at this time"
-
-          "NAPTR" ->
-            raise ArgumentError, "Cannot use NAPTR records at this time"
-
-          _ ->
-            nil
-        end
-      end
-
+    transport_name = get_transport_name(account)
+    proxy = get_proxy(account)
+    agent_name = String.to_atom(account.uri.userinfo)
     children = [
       {Sippet, name: transport_name},
-      {Guppi.Transport,
-       name: transport_name,
-       address: Guppi.Helpers.local_ip!(),
-       port: account.uri.port,
-       proxy: proxy}
+      {
+        Guppi.Transport,
+        name: transport_name,
+        address: Guppi.Helpers.local_ip!(),
+        port: account.uri.port,
+        proxy: proxy
+      }
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
@@ -59,14 +41,7 @@ defmodule Guppi.Agent do
     Sippet.register_core(transport_name, Guppi.Core)
 
     # silly mechanism to catch next agent state
-    init_state =
-      case account.register do
-        true ->
-          :register
-
-        false ->
-          :idle
-      end
+    init_state = get_init_state(account)
 
     # start the SIP agent
     GenServer.start_link(
@@ -75,11 +50,41 @@ defmodule Guppi.Agent do
         account: account,
         state: init_state,
         transport: transport_name,
-        name: String.to_atom(account.uri.userinfo),
+        name: agent_name,
         cseq: 0
       },
-      name: String.to_atom(account.uri.userinfo)
+      name: agent_name
     )
+  end
+
+  defp get_transport_name(account) do
+    account.uri.port |> to_charlist() |> List.to_atom()
+  end
+
+  defp get_proxy(account) do
+    with true <- Map.has_key?(account, :outbound_proxy),
+         true <- Map.has_key?(account.outbound_proxy, :dns) do
+      case account.outbound_proxy.dns do
+        "A" ->
+          {account.outbound_proxy.host, account.outbound_proxy.port}
+
+        "SRV" ->
+          raise ArgumentError, "Cannot use SRV records at this time"
+
+        "NAPTR" ->
+          raise ArgumentError, "Cannot use NAPTR records at this time"
+
+        _ ->
+          nil
+      end
+    end
+  end
+
+  defp get_init_state(account) do
+    case account.register do
+      true ->
+        :register
+    end
   end
 
   @impl true
@@ -205,10 +210,10 @@ defmodule Guppi.Agent do
   def handle_cast({:notify, request, _key}, agent) do
     Logger.debug("#{request.start_line.method}: #{inspect(request.body)}")
 
-    String.trim(request.body)
+    body = String.trim(request.body)
     |> String.split("\r\n")
     |> Enum.into([], fn x -> (String.trim(x) |> String.split(":")) end)
-    |> IO.inspect()
+    IO.inspect(body)
 
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
@@ -263,6 +268,8 @@ defmodule Guppi.Agent do
     ack = Guppi.Requests.ack(agent.account, agent.cseq, call, sdp_offer)
 
     Logger.debug("Valid Message? #{call_id}:\t", Message.valid?(ack))
+
+    Guppi.Media.TxPipeline.start_link({call_id, sdp_offer})
 
     Sippet.send(agent.transport, ack)
   end

@@ -4,8 +4,8 @@ defmodule Guppi.Media.TxPipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(sdp = %ExSDP{}) do
-    audio_ssrc = 10_101_010
+  def handle_init({call_id, sdp = %ExSDP{}}) do
+    audio_ssrc = call_id
 
     children = %{
       # Stream from file
@@ -25,8 +25,8 @@ defmodule Guppi.Media.TxPipeline do
       #  local_address: Guppi.Helpers.local_ip()
       # },
       udp_sink: %Membrane.UDP.Sink{
-        destination_port_no: sdp.connection_data.address,
-        destination_address: sdp.media[0].port
+        destination_port_no: sdp.media[0].port,
+        destination_address: sdp.connection_data.address,
       }
     }
 

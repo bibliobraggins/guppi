@@ -3,41 +3,42 @@ defmodule Guppi.Helpers do
 
   def local_ip!() do
     get_interfaces()
-    |> get_local_ip()
-    |> ip_string()
+    |> validate()
+    |> stringify()
   end
 
   def local_ip() do
     get_interfaces()
-    |> get_local_ip()
+    |> validate()
   end
 
   defp get_interfaces() do
     {:ok, address_list} = :inet.getif()
+
     address_list
   end
 
-  defp get_local_ip([head | _tail]) do
-    {ip, _broadcast, _net_mask} = head
-
+  defp validate([{ip, _, _} | _tail]) do
     case ip do
-      {10, _, _, _} ->
+      {10, 0..255, 0..255, 0..255} ->
         ip
 
-      {172, 16..31, _, _} ->
+      {172, 16..31, 0..255, 0..255} ->
         ip
 
-      {192, 168, _, _} ->
+      {192, 168, 0..255, 0..255} ->
         ip
 
+      {127, 0..255, 0..255, 0..255} ->
+        ip
       _ ->
-        Logger.warn("Guppi should only use regular private IP addresses, got: #{ip}")
         ip
     end
   end
 
-  defp ip_string(ip) when is_tuple(ip) do
-    Enum.join(Tuple.to_list(ip), ".")
+  defp stringify(ip) do
+    :inet.ntoa(ip)
+    |> to_string()
   end
 
   def measure(function) do
