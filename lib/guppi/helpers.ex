@@ -31,6 +31,7 @@ defmodule Guppi.Helpers do
 
       {127, 0..255, 0..255, 0..255} ->
         ip
+
       _ ->
         ip
     end

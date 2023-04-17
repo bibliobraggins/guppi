@@ -14,6 +14,7 @@ defmodule Guppi do
   end
 
   def stop, do: stop(:normal)
+
   def stop(:normal) do
     Supervisor.stop(__MODULE__, :normal)
   end

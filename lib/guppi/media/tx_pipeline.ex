@@ -26,7 +26,7 @@ defmodule Guppi.Media.TxPipeline do
       # },
       udp_sink: %Membrane.UDP.Sink{
         destination_port_no: sdp.media[0].port,
-        destination_address: sdp.connection_data.address,
+        destination_address: sdp.connection_data.address
       }
     }
 

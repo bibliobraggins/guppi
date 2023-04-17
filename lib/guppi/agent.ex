@@ -21,10 +21,11 @@ defmodule Guppi.Agent do
   """
 
   def start_link(account) do
-    Logger.debug account
+    Logger.debug(account)
     transport_name = get_transport_name(account)
     proxy = get_proxy(account)
     agent_name = String.to_atom(account.uri.userinfo)
+
     children = [
       {Sippet, name: transport_name},
       {
@@ -213,7 +214,7 @@ defmodule Guppi.Agent do
 
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
-    {:noreply, Map.put_new(agent, :mwi, [read: 0, unread: 0])}
+    {:noreply, Map.put_new(agent, :mwi, read: 0, unread: 0)}
   end
 
   @impl true
