@@ -30,6 +30,7 @@ defmodule Guppi.MixProject do
       {:jason, "~> 1.4"},
       {:socket, "~> 0.3.13"},
       {:poolboy, "~> 1.5.1"},
+      {:dns, "~> 2.4"},
       {:ex_libsrtp, "~> 0.5.1"},
       {:membrane_common_c, "~> 0.13.0"},
       {:membrane_raw_audio_format, "~> 0.9.0"},

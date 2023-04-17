@@ -66,21 +66,26 @@ defmodule Guppi.Agent do
   defp get_proxy(account) do
     with true <- Map.has_key?(account, :outbound_proxy),
          true <- Map.has_key?(account.outbound_proxy, :dns) do
+
       case account.outbound_proxy.dns do
         "A" ->
-          {account.outbound_proxy.host, account.outbound_proxy.port}
+          {account.outbound_proxy.record, account.outbound_proxy.port}
 
         "SRV" ->
-          raise ArgumentError, "Cannot use SRV records at this time"
+          resolve_srv(account.outbound_proxy)
 
         "NAPTR" ->
-          raise ArgumentError, "Cannot use NAPTR records at this time"
+          resolve_naptr(account.outbound_proxy)
 
         _ ->
-          nil
+          raise ArgumentError, "No suitable DNS record was supplied"
       end
     end
   end
+
+  defp resolve_srv(proxy), do: DNS.resolve(proxy.record, :srv)
+
+  defp resolve_naptr(proxy), do: DNS.resolve(proxy.record, :naptr)
 
   defp get_init_state(account) do
     case account.register do
