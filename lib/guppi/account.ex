@@ -3,8 +3,6 @@ defmodule Guppi.Account do
     Defines a struct that holds per account config variables
   """
 
-  alias Sippet.URI, as: URI
-
   defstruct name: nil,
             register: nil,
             extension: nil,
