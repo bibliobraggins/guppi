@@ -1,6 +1,6 @@
 # Guppi
 
-Guppi is intended as an RFC 3261 && 3263 compliant "phone".
+Guppi is intended as an RFC 3261/3263 compliant "phone".
 
 This project is a WIP, right now focus is on building out and abstracting SIP behavior.
 
