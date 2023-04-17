@@ -21,6 +21,7 @@ defmodule Guppi.Agent do
   """
 
   def start_link(account) do
+    Logger.debug account
     transport_name = get_transport_name(account)
     proxy = get_proxy(account)
     agent_name = String.to_atom(account.uri.userinfo)
@@ -209,11 +210,6 @@ defmodule Guppi.Agent do
   @impl true
   def handle_cast({:notify, request, _key}, agent) do
     Logger.debug("#{request.start_line.method}: #{inspect(request.body)}")
-
-    body = String.trim(request.body)
-    |> String.split("\r\n")
-    |> Enum.into([], fn x -> (String.trim(x) |> String.split(":")) end)
-    IO.inspect(body)
 
     Sippet.send(agent.transport, Message.to_response(request, 200))
 

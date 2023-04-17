@@ -16,6 +16,7 @@ defmodule Guppi.Account do
             realm: nil,
             proxy: nil,
             local_sdp: nil,
+            ip: nil,
             uri: nil,
             digit_map: nil,
             primary_dns: nil,
@@ -40,27 +41,18 @@ defmodule Guppi.Account do
     end
   end
 
-  defp parse_config!(raw_config),
-    do: Enum.into(raw_config.accounts, [], fn account -> parse_account(account) end)
+  defp parse_config!(raw_config) do
+    Enum.into(raw_config.accounts, [], fn account -> parse_account!(account) end)
+  end
 
-  defp parse_account(account) do
-    struct(Guppi.Account, parse_uri!(account))
+  defp parse_account!(account_map) do
+    account =
+    account_map
+    |> Map.replace!(:ip, String.replace(account_map.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!()))
+    |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))
+
+    struct(Guppi.Account, account)
   end
 
   # defp write(config), do: File.write!(@config_file, Jason.encode!(config), [])
-
-  defp parse_uri!(account) do
-    uri = String.replace(account.uri, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!(), [])
-
-    parsed_uri =
-      case URI.parse(uri) do
-        {:ok, %URI{} = parsed_uri} ->
-          parsed_uri
-
-        {:error, reason} ->
-          raise ArgumentError, "Invalid uri provided: #{inspect(reason)}"
-      end
-
-    Map.replace!(account, :uri, parsed_uri)
-  end
 end
