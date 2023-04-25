@@ -52,6 +52,15 @@ defmodule Guppi.Account do
       )
       |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))
 
+
+    account =
+      case Map.has_key?(account, :outbound_proxy) do
+        true ->
+          Map.replace!(account, :outbound_proxy, Guppi.Helpers.resolve_proxy(account.outbound_proxy))
+        false ->
+          account
+      end
+
     struct(Guppi.Account, account)
   end
 

@@ -19,10 +19,11 @@ defmodule Guppi.Transport do
   require Logger
 
   defstruct socket: nil,
-            family: :inet,
+            family: nil,
             sippet: nil,
-            proxy_host: nil,
+            proxy: nil,
             proxy_port: nil
+
 
   @doc """
   Starts the UDP transport.
@@ -80,24 +81,27 @@ defmodule Guppi.Transport do
                 ":address contains an invalid IP or DNS name, got: #{inspect(reason)}"
       end
 
-    case Keyword.fetch(options, :proxy) do
-      {:ok, {proxy_host, proxy_port}} ->
-        GenServer.start_link(__MODULE__, {name, ip, port, family, proxy_host, proxy_port})
+    proxy =
+      case Keyword.fetch(options, :proxy) do
+        {:ok, proxy_record} when is_list(proxy_record) ->
+          proxy_record
+        _ ->
+          raise ArgumentError, "This Transport requires an outbound proxy record"
+      end
 
-      _ ->
-        GenServer.start_link(__MODULE__, {name, ip, port, family})
-    end
+      GenServer.start_link(__MODULE__, {name, ip, port, family, proxy})
   end
 
   @impl true
-  def init({name, ip, port, family, proxy_host, proxy_port}) do
-    Sippet.register_transport(name, :udp, false)
+  def init({name, ip, port, family, proxy}) do
+    IO.inspect name
+    Sippet.register_transport(name, :transport_socket, false)
 
-    {:ok, nil, {:continue, {name, ip, port, family, proxy_host, proxy_port}}}
+    {:ok, nil, {:continue, {name, ip, port, family, proxy, Enum.at(proxy, 0).transport, Enum.at(proxy, 0).port}}}
   end
 
   @impl true
-  def handle_continue({name, ip, port, family, proxy_host, proxy_port}, nil) do
+  def handle_continue({name, ip, port, family, proxy, :udp, proxy_port}, nil) do
     case :gen_udp.open(port, [:binary, {:active, true}, {:ip, ip}, family]) do
       {:ok, socket} ->
         Logger.debug(
@@ -107,9 +111,9 @@ defmodule Guppi.Transport do
 
         state = %__MODULE__{
           socket: socket,
-          family: :inet,
+          family: family,
           sippet: name,
-          proxy_host: proxy_host,
+          proxy: proxy,
           proxy_port: proxy_port
         }
 
@@ -238,4 +242,5 @@ defmodule Guppi.Transport do
   defp stringify_hostport(host, port) do
     "#{host}:#{port}"
   end
+
 end

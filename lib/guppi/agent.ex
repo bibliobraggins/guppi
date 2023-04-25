@@ -21,10 +21,13 @@ defmodule Guppi.Agent do
   """
 
   def start_link(account) do
-    Logger.debug(account)
-    transport_name = get_transport_name(account)
-    proxy = get_proxy(account)
+
     agent_name = String.to_atom(account.uri.userinfo)
+
+    transport_name = get_transport_name(account.uri.port)
+
+    # silly mechanism to catch next agent state
+    init_state = get_init_state(account)
 
     children = [
       {Sippet, name: transport_name},
@@ -32,8 +35,7 @@ defmodule Guppi.Agent do
         Guppi.Transport,
         name: transport_name,
         address: Guppi.Helpers.local_ip!(),
-        port: account.uri.port,
-        proxy: proxy
+        proxy: account.outbound_proxy
       }
     ]
 
@@ -41,9 +43,6 @@ defmodule Guppi.Agent do
 
     # declare process module handling inbound messages
     Sippet.register_core(transport_name, Guppi.Core)
-
-    # silly mechanism to catch next agent state
-    init_state = get_init_state(account)
 
     # start the SIP agent
     GenServer.start_link(
@@ -59,33 +58,9 @@ defmodule Guppi.Agent do
     )
   end
 
-  defp get_transport_name(account) do
-    account.uri.port |> to_charlist() |> List.to_atom()
+  defp get_transport_name(port) do
+    port |> to_charlist() |> List.to_atom()
   end
-
-  defp get_proxy(account) do
-    with true <- Map.has_key?(account, :outbound_proxy),
-         true <- Map.has_key?(account.outbound_proxy, :dns) do
-
-      case account.outbound_proxy.dns do
-        "A" ->
-          {account.outbound_proxy.record, account.outbound_proxy.port}
-
-        "SRV" ->
-          resolve_srv(account.outbound_proxy)
-
-        "NAPTR" ->
-          resolve_naptr(account.outbound_proxy)
-
-        _ ->
-          raise ArgumentError, "No suitable DNS record was supplied"
-      end
-    end
-  end
-
-  defp resolve_srv(proxy), do: DNS.resolve(proxy.record, :srv)
-
-  defp resolve_naptr(proxy), do: DNS.resolve(proxy.record, :naptr)
 
   defp get_init_state(account) do
     case account.register do
@@ -96,11 +71,8 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
-    # we immediately register the "valid agent" to Guppi.Registry
-    case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
-      {:ok, _} -> :ok
-      error -> Logger.warn(inspect(error))
-    end
+
+    Logger.debug(agent)
 
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
