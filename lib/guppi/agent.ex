@@ -35,6 +35,7 @@ defmodule Guppi.Agent do
         Guppi.Transport,
         name: transport_name,
         address: Guppi.Helpers.local_ip!(),
+        port: 5065,
         proxy: account.outbound_proxy
       }
     ]

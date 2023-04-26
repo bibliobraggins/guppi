@@ -22,7 +22,7 @@ defmodule Guppi.Transport do
             family: nil,
             sippet: nil,
             proxy: nil,
-            proxy_port: nil
+            idx: nil
 
 
   @doc """
@@ -94,14 +94,13 @@ defmodule Guppi.Transport do
 
   @impl true
   def init({name, ip, port, family, proxy}) do
-    IO.inspect name
-    Sippet.register_transport(name, :transport_socket, false)
+    Sippet.register_transport(name, :udp, false)
 
-    {:ok, nil, {:continue, {name, ip, port, family, proxy, Enum.at(proxy, 0).transport, Enum.at(proxy, 0).port}}}
+    {:ok, nil, {:continue, {name, ip, port, family, proxy}}}
   end
 
   @impl true
-  def handle_continue({name, ip, port, family, proxy, :udp, proxy_port}, nil) do
+  def handle_continue({name, ip, port, family, proxy}, nil) do
     case :gen_udp.open(port, [:binary, {:active, true}, {:ip, ip}, family]) do
       {:ok, socket} ->
         Logger.debug(
@@ -114,7 +113,7 @@ defmodule Guppi.Transport do
           family: family,
           sippet: name,
           proxy: proxy,
-          proxy_port: proxy_port
+          idx: 0
         }
 
         {:noreply, state}
@@ -152,20 +151,22 @@ defmodule Guppi.Transport do
       ) do
     io_msg = Message.to_iodata(message)
 
+    Logger.debug(message)
+
     case message do
       %Message{start_line: %RequestLine{method: :register}} ->
         Logger.debug([
-          "sending Request to #{stringify_hostport(state.proxy_host, state.proxy_port)}/udp",
+          "sending Request to #{stringify_hostport(Enum.at(state.proxy, state.idx).target, Enum.at(state.proxy, state.idx).port)}/udp",
           ", #{inspect(key)}"
         ])
 
-        with {:ok, to_ip} <- resolve_name(state.proxy_host, :inet),
-             :ok <- :gen_udp.send(state.socket, {to_ip, state.proxy_port}, io_msg) do
+        with {:ok, to_ip} <- resolve_name(Enum.at(state.proxy, state.idx).target, :inet),
+             :ok <- :gen_udp.send(state.socket, {to_ip, Enum.at(state.proxy, state.idx).port}, io_msg) do
           :ok
         else
           {:error, reason} ->
             Logger.warn(
-              "udp transport error for #{state.proxy_host}:#{state.proxy_port}: #{inspect(reason)}"
+              "udp transport error for #{Enum.at(state.proxy, state.idx).target}:#{Enum.at(state.proxy, state.idx).port}: #{inspect(reason)}"
             )
 
             if key != nil do

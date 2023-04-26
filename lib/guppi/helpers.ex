@@ -80,12 +80,21 @@ defmodule Guppi.Helpers do
           %{
             transport: transport_scheme,
             port: port,
-            target: target
+            target: target,
           }
         end)
 
       {:error, reason} ->
         raise ArgumentError, "Bad SRV Record provided: #{reason}"
+    end
+  end
+
+  def res_a(domain) do
+    case DNS.resolve(domain, :a) do
+      {:ok, host} ->
+        host
+      {:error, reason} ->
+        raise ArgumentError, "Bad A Record provided: #{reason}"
     end
   end
 
