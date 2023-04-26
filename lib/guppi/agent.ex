@@ -35,7 +35,7 @@ defmodule Guppi.Agent do
         Guppi.Transport,
         name: transport_name,
         address: Guppi.Helpers.local_ip!(),
-        port: 5065,
+        port: account.uri.port,
         proxy: account.outbound_proxy
       }
     ]
@@ -72,8 +72,11 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
-
-    Logger.debug(agent)
+    # we immediately register the "valid agent" to Guppi.Registry
+    case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
+      {:ok, _} -> :ok
+      error -> Logger.warn(inspect(error))
+    end
 
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
