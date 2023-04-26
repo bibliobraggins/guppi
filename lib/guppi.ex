@@ -44,6 +44,7 @@ defmodule Guppi do
   end
 
   def register(port, name) do
+    Logger.debug "#{port} : #{name}"
     Registry.register(Guppi.Registry, port, name)
   end
 
