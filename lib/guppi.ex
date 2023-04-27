@@ -26,7 +26,7 @@ defmodule Guppi do
         [],
         fn account ->
           Supervisor.child_spec({Guppi.Agent, account},
-            id: {Integer.to_string(account.uri.port), account.uri.userinfo},
+            id: account.uri.userinfo,
             restart: :transient
           )
         end

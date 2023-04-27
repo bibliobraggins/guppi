@@ -111,7 +111,11 @@ defmodule Guppi.Agent do
 
     case Sippet.send(agent.transport, update_via(auth_request)) do
       :ok ->
-        {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
+        receive do
+          {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: _cseq}}} ->
+            Logger.warn("Unable to Authenticate: #{agent.name}")
+            {:noreply,Map.replace(agent, :state, :idle)}
+        end
 
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
@@ -287,7 +291,7 @@ defmodule Guppi.Agent do
     end
   end
 
-  def state(username) do
+  def status(username) do
     GenServer.call(username, :state)
   end
 

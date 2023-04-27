@@ -37,29 +37,28 @@ defmodule Televent do
           duration: duration()
         }
 
-  @valid [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, "*", "#", "A", "B", "C", "D", :flash]
+  def process(%__MODULE__{event: <<event::5>>}) do
 
+  end
   def process(input) do
-    if Enum.member?(@valid, input) == true do
-      case input do
-        0 -> <<0::5>>
-        1 -> <<1::5>>
-        2 -> <<2::5>>
-        3 -> <<3::5>>
-        4 -> <<4::5>>
-        5 -> <<5::5>>
-        6 -> <<6::5>>
-        7 -> <<7::5>>
-        8 -> <<8::5>>
-        9 -> <<9::5>>
-        "*" -> <<10::5>>
-        "#" -> <<11::5>>
-        "A" -> <<12::5>>
-        "B" -> <<13::5>>
-        "C" -> <<14::5>>
-        "D" -> <<15::5>>
-        :flash -> <<16::5>>
-      end
+    case input do
+      "0" -> struct(__MODULE__, [event: <<0::5>>, ])
+      "1" -> struct(__MODULE__, [event: <<1::5>>, ])
+      "2" -> struct(__MODULE__, [event: <<2::5>>, ])
+      "3" -> struct(__MODULE__, [event: <<3::5>>, ])
+      "4" -> struct(__MODULE__, [event: <<4::5>>, ])
+      "5" -> struct(__MODULE__, [event: <<5::5>>, ])
+      "6" -> struct(__MODULE__, [event: <<6::5>>, ])
+      "7" -> struct(__MODULE__, [event: <<7::5>>, ])
+      "8" -> struct(__MODULE__, [event: <<8::5>>, ])
+      "9" -> struct(__MODULE__, [event: <<9::5>>, ])
+      "*" -> struct(__MODULE__, [event: <<10::5>>, ])
+      "#" -> struct(__MODULE__, [event: <<11::5>>, ])
+      "A" -> struct(__MODULE__, [event: <<12::5>>, ])
+      "B" -> struct(__MODULE__, [event: <<13::5>>, ])
+      "C" -> struct(__MODULE__, [event: <<14::5>>, ])
+      "D" -> struct(__MODULE__, [event: <<15::5>>, ])
+      "flash" -> struct(__MODULE__, [event: <<16::5>>, ])
     end
   end
 end
