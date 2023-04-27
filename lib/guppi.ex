@@ -32,8 +32,6 @@ defmodule Guppi do
         end
       )
 
-    Registry.start_link(keys: :unique, name: Guppi.Registry)
-
     [Guppi.Calls | children]
   end
 
@@ -42,11 +40,4 @@ defmodule Guppi do
     Process.sleep(5)
     start()
   end
-
-  def register(port, name) do
-    Logger.debug "#{port} : #{name}"
-    Registry.register(Guppi.Registry, port, name)
-  end
-
-  def count, do: Registry.count(Guppi.Registry)
 end

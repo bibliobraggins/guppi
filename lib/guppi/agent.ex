@@ -67,17 +67,13 @@ defmodule Guppi.Agent do
     case account.register do
       true ->
         :register
+      false ->
+        :idle
     end
   end
 
   @impl true
   def init(agent) do
-    # we immediately register the "valid agent" to Guppi.Registry
-    case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
-      {:ok, _} -> :ok
-      error -> Logger.warn(inspect(error))
-    end
-
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->
