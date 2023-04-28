@@ -247,8 +247,6 @@ defmodule Guppi.Agent do
 
     Logger.debug("Valid Message? #{call_id}:\t", Message.valid?(ack))
 
-    Guppi.Media.TxPipeline.start_link({call_id, sdp_offer})
-
     Sippet.send(agent.transport, ack)
   end
 
