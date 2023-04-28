@@ -21,7 +21,7 @@ defmodule Guppi.RegisterTimer do
 
   @impl true
   def handle_continue(:wait, agent) do
-    Process.sleep(agent.account.registration_timer * 100)
+    Process.sleep(agent.account.registration_timer)
 
     {:noreply, agent, {:continue, :register}}
   end

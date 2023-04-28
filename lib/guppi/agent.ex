@@ -114,7 +114,9 @@ defmodule Guppi.Agent do
         receive do
           {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: _cseq}}} ->
             Logger.warn("Unable to Authenticate: #{agent.name}")
-            {:noreply,Map.replace(agent, :state, :idle)}
+            {:noreply, Map.replace(agent, :state, :idle)}
+          _ ->
+            {:noreply, agent}
         end
 
       {:error, reason} ->
