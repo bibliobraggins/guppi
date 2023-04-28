@@ -37,9 +37,6 @@ defmodule Televent do
           duration: duration()
         }
 
-  def process(%__MODULE__{event: <<event::5>>}) do
-
-  end
   def process(input) do
     case input do
       "0" -> struct(__MODULE__, [event: <<0::5>>, ])
@@ -58,7 +55,7 @@ defmodule Televent do
       "B" -> struct(__MODULE__, [event: <<13::5>>, ])
       "C" -> struct(__MODULE__, [event: <<14::5>>, ])
       "D" -> struct(__MODULE__, [event: <<15::5>>, ])
-      "flash" -> struct(__MODULE__, [event: <<16::5>>, ])
+      "F" -> struct(__MODULE__, [event: <<16::5>>, ])
     end
   end
 end
