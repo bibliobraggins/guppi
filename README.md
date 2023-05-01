@@ -20,10 +20,17 @@ example configuration:
       "register": true,
       "codecs": "pcmu",
       "transport": "udp",
-      "uri":"sip:username@0.0.0.0:5060",
+      "uri":"sip:username@0.0.0.0",
       "sip_user":"username",
       "sip_password":"**secret**",
+      "ip": "0.0.0.0",
+      "local_port": "5060"
       "realm":"sip_provider.com",
+      "outbound_proxy":{
+        "dns":"A",
+        "host":"proxy.sip_provider.com",
+        "port":5065
+      }
       "sdp": {
         "direction":"sendrecv",
         "rtp_range":[20000, 40000],
@@ -33,11 +40,6 @@ example configuration:
           "rfc2833":"127:telephone-event:8000:1"
         }
       },
-      "outbound_proxy":{
-        "dns":"A",
-        "host":"proxy.sip_provider.com",
-        "port":5065
-      }
     }
   ]
 }
