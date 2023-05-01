@@ -43,10 +43,10 @@ defmodule Guppi.Transport do
 
     port =
       case Keyword.fetch(options, :port) do
-        {:ok, port} when is_integer(port) and port > 0 and port < 65536 ->
+        {:ok, port} when is_integer(port) ->
           port
-        _ ->
-          5060
+        other ->
+          raise ArgumentError, "expected :port to be an integer between 1 and 65535, got: #{inspect(other)}"
       end
 
     {address, family} =
