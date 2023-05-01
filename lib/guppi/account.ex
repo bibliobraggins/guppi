@@ -15,6 +15,7 @@ defmodule Guppi.Account do
             proxy: nil,
             local_sdp: nil,
             ip: nil,
+            local_port: nil,
             uri: nil,
             digit_map: nil,
             primary_dns: nil,
