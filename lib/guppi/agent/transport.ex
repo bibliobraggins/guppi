@@ -81,11 +81,15 @@ defmodule Guppi.Transport do
                 ":address contains an invalid IP or DNS name, got: #{inspect(reason)}"
       end
 
+    Logger.info(options)
+
     proxy =
       case Keyword.fetch(options, :proxy) do
         {:ok, proxy_record} when is_list(proxy_record) ->
           proxy_record
-        _ ->
+        {:ok, %{target: _, transport_scheme: _, port: _} = proxy_record}  ->
+          [proxy_record]
+        :error ->
           raise ArgumentError, "This Transport requires an outbound proxy record"
       end
 

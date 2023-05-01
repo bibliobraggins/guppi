@@ -29,18 +29,14 @@ defmodule Guppi.Agent do
     # silly mechanism to catch next agent state
     init_state = get_init_state(account)
 
-    children = [
-      {Sippet, name: transport_name},
-      {
-        Guppi.Transport,
-        name: transport_name,
-        address: Guppi.Helpers.local_ip!(),
-        port: account.uri.port,
-        proxy: account.outbound_proxy
-      }
-    ]
+    Sippet.start_link(name: transport_name)
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+    Guppi.Transport.start_link(
+      name: transport_name,
+      address: Guppi.Helpers.local_ip!(),
+      port: account.uri.port,
+      proxy: account.outbound_proxy
+    )
 
     # declare process module handling inbound messages
     Sippet.register_core(transport_name, Guppi.Core)

@@ -42,14 +42,14 @@ defmodule Guppi.Helpers do
       "A" ->
         case Map.has_key?(record, :port) do
           true ->
-            %{domain: record.domain, port: record.port}
+            %{transport_scheme: :udp, target: record.domain, port: record.port}
           false ->
             raise ArgumentError, "port number is required when using an A record for proxy"
         end
       "SRV" ->
         case Map.has_key?(record, :transport_scheme) do
           true ->
-            %{domain: record.domain, transport_scheme: record.transport_scheme}
+            %{target: record.domain, transport_scheme: record.transport_scheme}
             res_srv(record.transport_scheme, record.domain)
           false ->
             raise ArgumentError, "transport_scheme is required when using an SRV record for proxy"
