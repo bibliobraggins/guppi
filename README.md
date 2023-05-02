@@ -18,8 +18,6 @@ example configuration:
   [
     {
       "register": true,
-      "codecs": "pcmu",
-      "transport": "udp",
       "uri":"sip:username@0.0.0.0",
       "sip_user":"username",
       "sip_password":"**secret**",
