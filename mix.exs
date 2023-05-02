@@ -46,7 +46,7 @@ defmodule Guppi.MixProject do
       {:membrane_wav_plugin, "~> 0.8.0"},
       {:membrane_ffmpeg_swresample_plugin, "~> 0.16.0"},
       {:membrane_fake_plugin, "~> 0.9.0"},
-      {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.2", only: [:dev], runtime: false}
 
       # {:dep_from_hexpm, "~> 0.3.0"},
     ]

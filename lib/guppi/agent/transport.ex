@@ -24,7 +24,6 @@ defmodule Guppi.Transport do
             proxy: nil,
             idx: nil
 
-
   @doc """
   Starts the UDP transport.
   """
@@ -45,8 +44,10 @@ defmodule Guppi.Transport do
       case Keyword.fetch(options, :port) do
         {:ok, port} when is_integer(port) ->
           port
+
         other ->
-          raise ArgumentError, "expected :port to be an integer between 1 and 65535, got: #{inspect(other)}"
+          raise ArgumentError,
+                "expected :port to be an integer between 1 and 65535, got: #{inspect(other)}"
       end
 
     {address, family} =
@@ -80,13 +81,15 @@ defmodule Guppi.Transport do
       case Keyword.fetch(options, :proxy) do
         {:ok, proxy_record} when is_list(proxy_record) ->
           proxy_record
-        {:ok, %{target: _, transport_scheme: _, port: _} = proxy_record}  ->
+
+        {:ok, %{target: _, transport_scheme: _, port: _} = proxy_record} ->
           [proxy_record]
+
         :error ->
           raise ArgumentError, "This Transport requires an outbound proxy record"
       end
 
-      GenServer.start_link(__MODULE__, {name, ip, port, family, proxy})
+    GenServer.start_link(__MODULE__, {name, ip, port, family, proxy})
   end
 
   @impl true
@@ -156,7 +159,8 @@ defmodule Guppi.Transport do
         ])
 
         with {:ok, to_ip} <- resolve_name(Enum.at(state.proxy, state.idx).target, :inet),
-             :ok <- :gen_udp.send(state.socket, {to_ip, Enum.at(state.proxy, state.idx).port}, io_msg) do
+             :ok <-
+               :gen_udp.send(state.socket, {to_ip, Enum.at(state.proxy, state.idx).port}, io_msg) do
           :ok
         else
           {:error, reason} ->
@@ -238,5 +242,4 @@ defmodule Guppi.Transport do
   defp stringify_hostport(host, port) do
     "#{host}:#{port}"
   end
-
 end

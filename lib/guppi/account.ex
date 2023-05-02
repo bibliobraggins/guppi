@@ -44,15 +44,21 @@ defmodule Guppi.Account do
             :ip,
             String.replace(account_map.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!())
           )
+
         false ->
           Map.put_new(account_map, :ip, Guppi.Helpers.local_ip!())
-      end |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))
-
+      end
+      |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))
 
     account =
       case Map.has_key?(account, :outbound_proxy) do
         true ->
-          Map.replace!(account, :outbound_proxy, Guppi.Helpers.resolve_proxy(account.outbound_proxy))
+          Map.replace!(
+            account,
+            :outbound_proxy,
+            Guppi.Helpers.resolve_proxy(account.outbound_proxy)
+          )
+
         false ->
           account
       end

@@ -21,7 +21,6 @@ defmodule Guppi.Agent do
   """
 
   def start_link(account) do
-
     agent_name = String.to_atom(account.uri.userinfo)
 
     transport = get_transport_name(account.local_port)
@@ -47,15 +46,19 @@ defmodule Guppi.Agent do
     case input do
       nil ->
         5060
+
       input when is_integer(input) and input > 0 and input < 65536 ->
         input
-    end |> to_charlist() |> List.to_atom()
+    end
+    |> to_charlist()
+    |> List.to_atom()
   end
 
   defp get_init_state(account) do
     case account.register do
       true ->
         :register
+
       false ->
         :idle
     end
@@ -116,6 +119,7 @@ defmodule Guppi.Agent do
           {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: _cseq}}} ->
             Logger.warn("Unable to Authenticate: #{agent.name}")
             {:noreply, Map.replace(agent, :state, :idle)}
+
           _ ->
             {:noreply, agent}
         end
