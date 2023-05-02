@@ -36,5 +36,5 @@ Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
 
 Each Account spawns a Guppi.Agent, A GenServer that spawns it's own Transport.
 
-Each Agent is referencable via the username declared in the sip URI as an atomic value. 
+Each Agent is referencable via the username declared in the sip URI as an atom
 
