@@ -36,14 +36,5 @@ Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
 
 Each Account spawns a Guppi.Agent, A GenServer that spawns it's own Transport.
 
-```
-iex(1)> Registry.lookup(Guppi.Registry, local_port)
-{#PID<XXX>, :uri}
-```
-
-To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
-
-## Installation
-
-# TODO: Determine hosting solutions when a viable 0.1.0 can be released.
+Each Agent is referencable via the username declared in the sip URI as an atomic value. 
 
