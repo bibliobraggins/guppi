@@ -24,22 +24,10 @@ defmodule Guppi.Agent do
 
     agent_name = String.to_atom(account.uri.userinfo)
 
-    transport_name = get_transport_name(account.local_port)
+    transport = get_transport_name(account.local_port)
 
     # silly mechanism to catch next agent state
     init_state = get_init_state(account)
-
-    Sippet.start_link(name: transport_name)
-
-    Guppi.Transport.start_link(
-      name: transport_name,
-      address: Guppi.Helpers.local_ip!(),
-      port: account.local_port,
-      proxy: account.outbound_proxy
-    )
-
-    # declare process module handling inbound messages
-    Sippet.register_core(transport_name, Guppi.Core)
 
     # start the SIP agent
     GenServer.start_link(
@@ -47,7 +35,7 @@ defmodule Guppi.Agent do
       %{
         account: account,
         state: init_state,
-        transport: transport_name,
+        transport: transport,
         name: agent_name,
         cseq: 0
       },
@@ -75,6 +63,18 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
+    Sippet.start_link(name: agent.transport)
+
+    Guppi.Transport.start_link(
+      name: agent.transport,
+      address: Guppi.Helpers.local_ip!(),
+      port: agent.account.local_port,
+      proxy: agent.account.outbound_proxy
+    )
+
+    # declare process module handling inbound messages
+    Sippet.register_core(agent.transport, Guppi.Core)
+
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->

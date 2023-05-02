@@ -4,13 +4,15 @@ defmodule Guppi.Agent.Media do
   def sdp(account = %Account{}, _offer) do
     # todo: add conditions for best candidate selection, instead of static codec offering
 
+    id = Enum.random(0..65_535)
+
     %ExSDP{
       version: 0,
-      session_name: "Guppi_#{Enum.random(0..65_535)}",
+      session_name: "Guppi_#{id}",
       origin: %ExSDP.Origin{
         username: "-",
         network_type: "IN",
-        session_id: Enum.random(0..65_535),
+        session_id: id,
         session_version: 0,
         address: Socket.Address.parse(account.uri.host)
       },

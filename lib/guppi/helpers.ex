@@ -3,13 +3,13 @@ defmodule Guppi.Helpers do
 
   def local_ip!() do
     get_interfaces()
-    |> validate()
+    |> validate_ip()
     |> stringify()
   end
 
   def local_ip() do
     get_interfaces()
-    |> validate()
+    |> validate_ip()
   end
 
   defp get_interfaces() do
@@ -18,7 +18,7 @@ defmodule Guppi.Helpers do
     address_list
   end
 
-  defp validate([{ip, _, _} | _tail]) do
+  defp validate_ip([{ip, _, _} | _tail]) do
     case ip do
       {10, 0..255, 0..255, 0..255} ->
         ip
