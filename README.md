@@ -29,7 +29,7 @@ example configuration:
       "outbound_proxy":{
         "dns":"A",
         "host":"proxy.sip_provider.com",
-        "port":5065
+        "port":5060
       }
       "sdp": {
         "direction":"sendrecv",
