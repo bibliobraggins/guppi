@@ -4,12 +4,11 @@ Guppi is intended as an RFC 3261/3263 compliant "phone".
 
 This project is a WIP, right now focus is on building out and abstracting SIP behavior.
 
-Features Planned: 
-- SIP call handling (wip)
-- codecs: G711, OPUS | (wip)
-- rfc3263 call server location (wip)
-- dtmf rfc2833/4733 (not started)
-- ATA device support via Nerves ( being considered )
+Current Status:
+  - User Registration
+  - Basic Call handling (WIP, no audio as of yet)
+  - UDP transport (looking to implement TCP and TLS via TCP next)
+  - NAPTR, SRV, or A record DNS support
 
 example configuration:
 ```
@@ -29,22 +28,13 @@ example configuration:
         "host":"proxy.sip_provider.com",
         "port":5060
       }
-      "sdp": {
-        "direction":"sendrecv",
-        "rtp_range":[20000, 40000],
-        "codecs": {
-          "g711u":"0:PCMU:8000:1",
-          "g711a":"8:PCMA:8000:1",
-          "rfc2833":"127:telephone-event:8000:1"
-        }
-      },
     }
   ]
 }
 ```
-use 0.0.0.0 when you do not care what socket to listen on.
+Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
 
-Each Account is spawned in a Guppi.Agent, and is supervised by Guppi itself.
+Each Account spawns a Guppi.Agent, A GenServer that spawns it's own Transport.
 
 ```
 iex(1)> Registry.lookup(Guppi.Registry, local_port)
