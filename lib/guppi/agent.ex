@@ -23,7 +23,7 @@ defmodule Guppi.Agent do
   def start_link(account) do
     agent_name = String.to_atom(account.uri.userinfo)
 
-    transport = get_transport_name(account.local_port)
+    transport = set_transport_name(account.local_port)
 
     # silly mechanism to catch next agent state
     init_state = get_init_state(account)
@@ -42,16 +42,11 @@ defmodule Guppi.Agent do
     )
   end
 
-  defp get_transport_name(input) do
-    case input do
-      nil ->
-        5060
-
-      input when is_integer(input) and input > 0 and input < 65536 ->
-        input
-    end
-    |> to_charlist()
-    |> List.to_atom()
+  defp set_transport_name(nil), do: :"5060"
+  defp set_transport_name(input) when is_integer(input) and input > 0 and input < 65536 do
+    input
+    |> Integer.to_string()
+    |> String.to_atom()
   end
 
   defp get_init_state(account) do
