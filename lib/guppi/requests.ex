@@ -22,10 +22,11 @@ defmodule Guppi.Requests do
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
+          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"), %{}},
+          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
+           %{}},
         contact: {"", account.uri, %{}},
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
@@ -47,7 +48,7 @@ defmodule Guppi.Requests do
           {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
            %{"branch" => call.via.branch}}
         ],
-        from: {"", call.to.uri, %{"tag" => Message.create_tag()}},
+        from: {"#{account.display_name}", call.to.uri, %{"tag" => Message.create_tag()}},
         to: {call.from.caller_id, call.from.uri, call.from.tag},
         expires: account.registration_timer,
         max_forwards: account.max_forwards,

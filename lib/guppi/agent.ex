@@ -43,6 +43,7 @@ defmodule Guppi.Agent do
   end
 
   defp set_transport_name(nil), do: :"5060"
+
   defp set_transport_name(input) when is_integer(input) and input > 0 and input < 65536 do
     input
     |> Integer.to_string()
