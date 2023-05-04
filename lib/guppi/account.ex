@@ -9,14 +9,18 @@ defmodule Guppi.Account do
             extension: nil,
             display_name: nil,
             registration_timer: nil,
+            subscription_timer: nil,
+            refresh_timer: nil,
             max_forwards: nil,
             local_sdp: nil,
             ip: nil,
             local_port: nil,
             uri: nil,
             allow: nil,
+            user_agent: nil,
             outbound_proxy: nil,
             sdp: nil,
+            subscribes: nil,
             certificate: nil
 
   # @defaults %{}

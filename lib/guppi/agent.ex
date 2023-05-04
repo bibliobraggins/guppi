@@ -4,7 +4,7 @@ defmodule Guppi.Agent do
   require Logger
 
   alias Guppi.Requests, as: Requests
-  alias Guppi.RegisterTimer, as: RegisterTimer
+  alias Guppi.RegistrationScheduler, as: RegistrationScheduler
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
@@ -74,16 +74,23 @@ defmodule Guppi.Agent do
     # declare process module handling inbound messages
     Sippet.register_core(agent.transport, Guppi.Core)
 
+    {:ok, agent, {:continue, :nil}}
+  end
+
+  @impl true
+  def handle_continue(:nil, agent) do
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->
-        # GenServer.cast(self(), :register)
-        RegisterTimer.start_link(agent)
-        {:ok, agent}
-
+        RegistrationScheduler.start_link(agent)
+        {:noreply, agent}
       _ ->
-        {:ok, agent}
+        nil
     end
+
+    # implement blf subscription set up here
+
+    {:noreply, agent}
   end
 
   @impl true
@@ -94,7 +101,7 @@ defmodule Guppi.Agent do
     request =
       case cseq do
         {_, :register} ->
-          RegisterTimer.make_register(agent)
+          RegistrationScheduler.make_register(agent)
 
         _ ->
           raise RuntimeError,

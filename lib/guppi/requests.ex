@@ -31,7 +31,7 @@ defmodule Guppi.Requests do
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :register},
-        user_agent: "Guppi/0.1.0",
+        user_agent: "#{account.user_agent}",
         call_id: Message.create_call_id()
       }
     }
@@ -53,10 +53,11 @@ defmodule Guppi.Requests do
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :ack},
-        user_agent: "Guppi/0.1.0",
+        user_agent: "#{account.user_agent}",
         call_id: call.id
       },
       body: to_string(Guppi.Agent.Media.sdp(account, sdp_offer))
     }
   end
+
 end

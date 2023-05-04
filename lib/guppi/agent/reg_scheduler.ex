@@ -1,4 +1,4 @@
-defmodule Guppi.RegisterTimer do
+defmodule Guppi.RegistrationScheduler do
   use GenServer
 
   require Logger
