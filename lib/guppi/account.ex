@@ -10,7 +10,6 @@ defmodule Guppi.Account do
             display_name: nil,
             registration_timer: nil,
             max_forwards: nil,
-            realm: nil,
             local_sdp: nil,
             ip: nil,
             local_port: nil,

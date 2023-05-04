@@ -15,17 +15,17 @@ defmodule Guppi.Requests do
         }
   def register(account = %Account{}, cseq) do
     %Message{
-      start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.realm}"),
+      start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.uri.host}"),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.realm}"),
+          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.realm}"), %{}},
+          {"", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"), %{}},
         contact: {"", account.uri, %{}},
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
