@@ -60,4 +60,33 @@ defmodule Guppi.Requests do
     }
   end
 
+  def subscribe(account, cseq, blf_uri) do
+    %Message{
+      start_line: RequestLine.new(:subscribe, "sip:" <> blf_uri),
+      headers: %{
+        via: [
+          {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
+           %{"branch" => Message.create_branch()}}
+        ],
+        from: {
+          account.display_name,
+          account.uri,
+          %{"tag" => Message.create_tag()}
+        },
+        to: {
+          "",
+          blf_uri,
+          nil
+        },
+        event: "dialog",
+        Accept: "application/dialog-info+xml",
+        expires: account.subscription_timer,
+        max_forwards: account.max_forwards,
+        cseq: {cseq, :subscribe},
+        user_agent: "#{account.user_agent}",
+        call_id: "#{blf_uri}_#{cseq}"
+      }
+    }
+  end
+
 end

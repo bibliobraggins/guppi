@@ -13,8 +13,8 @@ defmodule Guppi.SubscriptionScheduler do
   end
 
   @impl true
-  def handle_continue(:register, agent) do
-    send(agent, :register)
+  def handle_continue(:subcribe, agent) do
+    send(agent, :subscribe)
 
     {:noreply, agent, {:continue, :wait}}
   end
