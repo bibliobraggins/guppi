@@ -1,4 +1,4 @@
-defmodule Guppi.SubscriptionScheduler do
+defmodule Guppi.BlfHandler do
   use GenServer
 
   require Logger
