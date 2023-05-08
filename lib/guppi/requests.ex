@@ -15,17 +15,17 @@ defmodule Guppi.Requests do
         }
   def register(account = %Account{}, cseq) do
     %Message{
-      start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.uri.host}"),
+      start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.ip}"),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
+          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
+          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.uri.host}"),
+          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
            %{}},
         contact: {"", account.uri, %{}},
         expires: account.registration_timer,
@@ -42,14 +42,17 @@ defmodule Guppi.Requests do
         }
   def ack(account, cseq, call, sdp_offer) do
     %Message{
-      start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.uri.host}"),
+      start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.ip}"),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
+          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
            %{"branch" => call.via.branch}}
         ],
         from: {"#{account.display_name}", call.to.uri, %{"tag" => Message.create_tag()}},
         to: {call.from.caller_id, call.from.uri, call.from.tag},
+        contact: [
+          account.display_name, Sippet.URI.parse!(""), %{}
+        ],
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :ack},
@@ -65,7 +68,7 @@ defmodule Guppi.Requests do
       start_line: RequestLine.new(:subscribe, "sip:" <> blf_uri),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.uri.host}", account.uri.port},
+          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from: {
@@ -88,5 +91,7 @@ defmodule Guppi.Requests do
       }
     }
   end
+
+
 
 end
