@@ -3,7 +3,7 @@ defmodule Guppi.BlfHandler do
 
   require Logger
 
-  def start_link(agent, blf_target, timer \\ Integer) do
+  def start_link(agent, blf_target, timer) do
 
     timer =
       case timer do
