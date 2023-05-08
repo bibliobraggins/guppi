@@ -22,12 +22,12 @@ defmodule Guppi.Requests do
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
+          {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
+          {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
            %{}},
-        contact: {"", account.uri, %{}},
+        contact: {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :register},
@@ -50,9 +50,7 @@ defmodule Guppi.Requests do
         ],
         from: {"#{account.display_name}", call.to.uri, %{"tag" => Message.create_tag()}},
         to: {call.from.caller_id, call.from.uri, call.from.tag},
-        contact: [
-          account.display_name, Sippet.URI.parse!(""), %{}
-        ],
+        contact: contact(account),
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :ack},
@@ -81,6 +79,7 @@ defmodule Guppi.Requests do
           blf_uri,
           nil
         },
+        contact: contact(account),
         event: "dialog",
         Accept: "application/dialog-info+xml",
         expires: account.subscription_timer,
@@ -92,6 +91,8 @@ defmodule Guppi.Requests do
     }
   end
 
-
+  defp contact(account) do
+    {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
+  end
 
 end
