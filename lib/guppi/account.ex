@@ -41,7 +41,7 @@ defmodule Guppi.Account do
   defp parse_account!(account_map) do
     account =
       case Map.fetch(account_map, :ip) do
-        {:ok, ip} ->
+        {:ok, _ip} ->
           account_map
         _ ->
           Map.replace!(
