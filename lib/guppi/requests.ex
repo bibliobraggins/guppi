@@ -22,12 +22,15 @@ defmodule Guppi.Requests do
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
+          {account.display_name,
+           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
-           %{}},
-        contact: {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
+          {account.display_name,
+           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
+        contact:
+          {account.display_name,
+           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
         expires: account.registration_timer,
         max_forwards: account.max_forwards,
         cseq: {cseq, :register},
@@ -45,8 +48,7 @@ defmodule Guppi.Requests do
       start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.ip}"),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
-           %{"branch" => call.via.branch}}
+          {{2, 0}, :udp, {"#{account.ip}", account.uri.port}, %{"branch" => call.via.branch}}
         ],
         from: {"#{account.display_name}", call.to.uri, %{"tag" => Message.create_tag()}},
         to: {call.from.caller_id, call.from.uri, call.from.tag},
@@ -92,7 +94,8 @@ defmodule Guppi.Requests do
   end
 
   def contact(account) do
-    {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
+    {account.display_name,
+     URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
   end
 
   # updates cseq, via, and from headers for a given request.
@@ -109,5 +112,4 @@ defmodule Guppi.Requests do
       {name, uri, %{params | "tag" => Message.create_tag()}}
     end)
   end
-
 end

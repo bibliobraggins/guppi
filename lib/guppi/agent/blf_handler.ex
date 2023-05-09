@@ -4,13 +4,13 @@ defmodule Guppi.BlfHandler do
   require Logger
 
   def start_link(agent, blf_target, timer) do
-
     timer =
       case timer do
         {:ok, timer} ->
           timer * 100
+
         nil ->
-          360000
+          360_000
       end
 
     GenServer.start_link(__MODULE__, {agent, blf_target, timer})
@@ -34,5 +34,4 @@ defmodule Guppi.BlfHandler do
 
     {:noreply, {agent, blf_target, timer}, {:continue, :subscribe}}
   end
-
 end

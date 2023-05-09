@@ -36,7 +36,8 @@ defmodule Guppi.Agent do
         state: init_state,
         transport: transport,
         name: agent_name,
-        cseq: 0
+        cseq: 0,
+        mwi: nil
       },
       name: agent_name
     )
@@ -74,16 +75,17 @@ defmodule Guppi.Agent do
     # declare process module handling inbound messages
     Sippet.register_core(agent.transport, Guppi.Core)
 
-    {:ok, agent, {:continue, :nil}}
+    {:ok, agent, {:continue, nil}}
   end
 
   @impl true
-  def handle_continue(:nil, agent) do
+  def handle_continue(nil, agent) do
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->
         RegistrationScheduler.start_link(agent)
         {:noreply, agent}
+
       _ ->
         nil
     end
@@ -205,7 +207,7 @@ defmodule Guppi.Agent do
 
     Sippet.send(agent.transport, Message.to_response(request, 200))
 
-    {:noreply, Map.put_new(agent, :mwi, read: 0, unread: 0)}
+    {:noreply, agent}
   end
 
   @impl true

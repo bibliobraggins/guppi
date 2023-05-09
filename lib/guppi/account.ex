@@ -43,6 +43,7 @@ defmodule Guppi.Account do
       case Map.fetch(account_map, :ip) do
         {:ok, _ip} ->
           account_map
+
         _ ->
           Map.replace!(
             account_map,
