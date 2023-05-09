@@ -108,7 +108,7 @@ defmodule Guppi.Agent do
                 "#{agent.account.uri.userinfo} was challenged on a method we can't make yet"
       end
 
-    {:ok, auth_request} =
+    {:ok, auth_req} =
       DigestAuth.make_request(
         request,
         challenge,
@@ -116,7 +116,7 @@ defmodule Guppi.Agent do
         []
       )
 
-    case Sippet.send(agent.transport, update_via(auth_request)) do
+    case Sippet.send(agent.transport, Requests.via(auth_req)) do
       :ok ->
         receive do
           {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: _cseq}}} ->
@@ -269,21 +269,6 @@ defmodule Guppi.Agent do
       false ->
         488
     end
-  end
-
-  # updates cseq, via, and from headers for a given request.
-  # appropriate for authentication challenges. may be useful elsewhere.
-  defp update_via(request) do
-    request
-    |> Message.update_header(:cseq, fn {seq, method} ->
-      {seq + 1, method}
-    end)
-    |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
-      {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
-    end)
-    |> Message.update_header(:from, fn {name, uri, params} ->
-      {name, uri, %{params | "tag" => Message.create_tag()}}
-    end)
   end
 
   defp validate_offer(body) do

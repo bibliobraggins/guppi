@@ -77,7 +77,7 @@ defmodule Guppi.Requests do
         to: {
           "",
           blf_uri,
-          nil
+          %{}
         },
         contact: contact(account),
         event: "dialog",
@@ -91,8 +91,23 @@ defmodule Guppi.Requests do
     }
   end
 
-  defp contact(account) do
+  def contact(account) do
     {account.display_name, URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
+  end
+
+  # updates cseq, via, and from headers for a given request.
+  # appropriate for authentication challenges. may be useful elsewhere.
+  def via(message) do
+    message
+    |> Message.update_header(:cseq, fn {seq, method} ->
+      {seq + 1, method}
+    end)
+    |> Message.update_header_front(:via, fn {ver, proto, hostport, params} ->
+      {ver, proto, hostport, %{params | "branch" => Message.create_branch()}}
+    end)
+    |> Message.update_header(:from, fn {name, uri, params} ->
+      {name, uri, %{params | "tag" => Message.create_tag()}}
+    end)
   end
 
 end
