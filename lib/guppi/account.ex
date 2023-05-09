@@ -40,16 +40,15 @@ defmodule Guppi.Account do
 
   defp parse_account!(account_map) do
     account =
-      case Map.has_key?(account_map, :ip) do
-        true ->
+      case Map.fetch(account_map, :ip) do
+        {:ok, ip} ->
+          account_map
+        _ ->
           Map.replace!(
             account_map,
             :ip,
             String.replace(account_map.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!())
           )
-
-        false ->
-          Map.put_new(account_map, :ip, Guppi.Helpers.local_ip!())
       end
       |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))
 

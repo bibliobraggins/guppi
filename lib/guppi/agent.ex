@@ -66,7 +66,7 @@ defmodule Guppi.Agent do
 
     Guppi.Transport.start_link(
       name: agent.transport,
-      address: Guppi.Helpers.local_ip!(),
+      address: agent.account.ip,
       port: agent.account.local_port,
       proxy: agent.account.outbound_proxy
     )
