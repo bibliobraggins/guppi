@@ -29,7 +29,6 @@ defmodule Guppi.MixProject do
       {:dns, "~> 2.4"},
       {:socket, "~> 0.3.13"},
       {:bunch, "~> 1.5.0"},
-      {:elixir_xml_to_map, "~> 3.0"},
       {:poolboy, "~> 1.5.1"},
       {:phone, "~> 0.5.6"},
       {:ex_sdp, "~> 0.11.0"},

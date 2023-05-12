@@ -8,6 +8,8 @@ defmodule Guppi do
   def start, do: start_link(nil)
 
   def start_link(_) do
+    Registry.start_link(keys: :unique, name: Guppi.Registry)
+
     children = init_accounts()
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
@@ -34,6 +36,12 @@ defmodule Guppi do
 
     [Guppi.Calls | children]
   end
+
+  def register(port, name) do
+    Registry.register(Guppi.Registry, port, name)
+  end
+
+  def count, do: Registry.count(Guppi.Registry)
 
   def restart do
     stop(:normal)

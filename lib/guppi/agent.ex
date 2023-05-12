@@ -75,6 +75,11 @@ defmodule Guppi.Agent do
     # declare process module handling inbound messages
     Sippet.register_core(agent.transport, Guppi.Core)
 
+    case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
+      {:ok, _} -> :ok
+      error -> Logger.warn(inspect(error))
+    end
+
     {:ok, agent, {:continue, nil}}
   end
 
@@ -183,6 +188,7 @@ defmodule Guppi.Agent do
           response
         )
 
+
         create_call(
           request.headers.call_id,
           request.headers.from,
@@ -191,6 +197,8 @@ defmodule Guppi.Agent do
         )
 
         ack_call(request.headers.call_id, agent, sdp_offer)
+
+
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
 
@@ -255,9 +263,8 @@ defmodule Guppi.Agent do
   defp ack_call(call_id, agent, sdp_offer) do
     call = %Guppi.Call{} = Guppi.Calls.get(call_id)
 
-    ack = Guppi.Requests.ack(agent.account, agent.cseq, call, sdp_offer)
-
-    Logger.debug("Valid Message? #{call_id}:\t", Message.valid?(ack))
+    ack = Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
+    Logger.warn(to_string(ack))
 
     Sippet.send(agent.transport, ack)
   end

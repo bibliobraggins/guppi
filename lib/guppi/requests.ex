@@ -45,7 +45,7 @@ defmodule Guppi.Requests do
         }
   def ack(account, cseq, call, sdp_offer) do
     %Message{
-      start_line: RequestLine.new(:ack, "#{call.to.uri.scheme}:#{call.from.ip}"),
+      start_line: RequestLine.new(:ack, "#{call.from.uri.scheme}:#{call.from.uri.host}"),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{account.ip}", account.uri.port}, %{"branch" => call.via.branch}}
@@ -59,7 +59,7 @@ defmodule Guppi.Requests do
         user_agent: "#{account.user_agent}",
         call_id: call.id
       },
-      body: to_string(Guppi.Agent.Media.sdp(account, sdp_offer))
+      body: sdp_offer
     }
   end
 

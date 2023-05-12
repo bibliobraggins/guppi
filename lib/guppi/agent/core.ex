@@ -75,6 +75,10 @@ defmodule Guppi.Core do
   defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)
 
   defp route_agent(%Sippet.URI{} = uri) do
-    String.to_existing_atom(uri.userinfo)
+    case Registry.lookup(Guppi.Registry, uri.port) do
+      [{pid, _agent}] when is_pid(pid) ->
+        pid
+        # [] -> [] # shouldn't even be possible tbh. refactor maybe?
+    end
   end
 end
