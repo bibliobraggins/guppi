@@ -19,6 +19,15 @@ defmodule Guppi.Core do
     the respective Sippet :name and Transport :name fields.
   """
 
+  def child_spec(opts) do
+    IO.inspect opts
+    %{
+      start: {Sippet, :register_core, [name: opts[:name]]},
+      type: :worker,
+      restart: :transient,
+    }
+  end
+
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug(

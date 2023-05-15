@@ -1,5 +1,5 @@
 defmodule Guppi.Agent.Media do
-  alias Guppi.Account, as: Account
+  alias Guppi.Config.Account, as: Account
 
   def sdp(account = %Account{}, _offer) do
     # todo: add conditions for best candidate selection, instead of static codec offering

@@ -8,9 +8,7 @@ defmodule Guppi do
   def start, do: start_link(nil)
 
   def start_link(_) do
-    Registry.start_link(keys: :unique, name: Guppi.Registry)
-
-    children = init_accounts()
+    children = init_config()
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
   end
@@ -21,31 +19,68 @@ defmodule Guppi do
     Supervisor.stop(__MODULE__, :normal)
   end
 
-  defp init_accounts() do
-    children =
+  defp init_config() do
+    config = Guppi.Config.read_config!()
+
+    agents =
       Enum.into(
-        Guppi.Account.read_config!(),
+        config.accounts,
         [],
         fn account ->
           Supervisor.child_spec({Guppi.Agent, account},
-            id: account.uri.userinfo,
+            id: String.to_atom(account.uri.userinfo),
             restart: :transient
           )
         end
       )
 
-    [Guppi.Calls | children]
-  end
+    sippets =
+      Enum.into(
+        config.transports,
+        [],
+        fn transport ->
+          sip_stack(transport)
+        end
+      )
 
-  def register(port, name) do
-    Registry.register(Guppi.Registry, port, name)
-  end
 
-  def count, do: Registry.count(Guppi.Registry)
+    transports =
+      Enum.into(
+        config.transports,
+        [],
+        fn transport ->
+          setup_transport(transport)
+        end
+      )
+
+
+    [Guppi.Calls, Guppi.AgentRegistry, transports, agents]
+  end
 
   def restart do
     stop(:normal)
     Process.sleep(5)
     start()
   end
+
+  def sip_stack(transport) do
+    name = Integer.to_string(transport.port) |> String.to_atom()
+
+    Supervisor.child_spec({Sippet, name: name}, [])
+  end
+
+  def setup_transport(transport) do
+    name = Integer.to_string(transport.port) |> String.to_atom()
+    Supervisor.child_spec(
+      {
+        Guppi.Transport,
+        name: name,
+        address: transport.ip,
+        port: transport.port,
+        proxy: transport.outbound_proxy
+      },
+      []
+    )
+  end
+
 end

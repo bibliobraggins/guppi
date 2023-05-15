@@ -63,23 +63,6 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
-    Sippet.start_link(name: agent.transport)
-
-    Guppi.Transport.start_link(
-      name: agent.transport,
-      address: agent.account.ip,
-      port: agent.account.local_port,
-      proxy: agent.account.outbound_proxy
-    )
-
-    # declare process module handling inbound messages
-    Sippet.register_core(agent.transport, Guppi.Core)
-
-    case Guppi.register(agent.account.uri.port, agent.account.uri.userinfo) do
-      {:ok, _} -> :ok
-      error -> Logger.warn(inspect(error))
-    end
-
     {:ok, agent, {:continue, nil}}
   end
 

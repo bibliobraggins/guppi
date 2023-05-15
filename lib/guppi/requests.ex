@@ -1,5 +1,5 @@
 defmodule Guppi.Requests do
-  alias Guppi.Account, as: Account
+  alias Guppi.Config.Account, as: Account
 
   alias Sippet.Message, as: Message
   alias Sippet.URI, as: URI
