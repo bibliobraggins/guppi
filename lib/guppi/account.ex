@@ -42,13 +42,17 @@ defmodule Guppi.Account do
     account =
       case Map.fetch(account_map, :ip) do
         {:ok, _ip} ->
-          account_map
+          Map.replace!(
+            account_map,
+            :ip,
+            String.replace(account_map.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!())
+          )
 
         _ ->
           Map.replace!(
             account_map,
             :ip,
-            String.replace(account_map.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!())
+            Guppi.Helpers.local_ip!()
           )
       end
       |> Map.replace!(:uri, Sippet.URI.parse!(account_map.uri))

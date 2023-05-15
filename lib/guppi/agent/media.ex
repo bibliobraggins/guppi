@@ -14,7 +14,7 @@ defmodule Guppi.Agent.Media do
         network_type: "IN",
         session_id: id,
         session_version: 0,
-        address: Socket.Address.parse(account.uri.host)
+        address: account.ip
       },
       attributes: [:sendrecv],
       bandwidth: [],
@@ -26,7 +26,7 @@ defmodule Guppi.Agent.Media do
           fmt: [0],
           port_count: 1,
           connection_data: %ExSDP.ConnectionData{
-            address: Socket.Address.parse(account.uri.host),
+            address: account.ip,
             address_count: nil,
             ttl: nil,
             network_type: "IN"
