@@ -105,7 +105,8 @@ defmodule Guppi.Agent do
             {:noreply, Map.replace(agent, :state, :idle)}
 
           _ ->
-            {:noreply, agent}
+
+            {:noreply, Map.replace(agent, :state, :registered)}
         end
 
       {:error, reason} ->

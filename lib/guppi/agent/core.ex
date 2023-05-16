@@ -21,8 +21,6 @@ defmodule Guppi.Core do
   """
 
   def start_link(opts) do
-    IO.inspect opts[:name]
-
     GenServer.start_link(__MODULE__, opts)
   end
 
@@ -83,7 +81,7 @@ defmodule Guppi.Core do
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         client_key
       ) do
-    Logger.debug("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
+    Logger.warn("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
