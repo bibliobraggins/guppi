@@ -24,7 +24,6 @@ defmodule Guppi.Config do
     accounts = Enum.into(raw_config.accounts, [], fn account -> Account.set_account!(account) end)
 
     transports = Enum.into(raw_config.transports, [], fn transport -> Transport.set_transport!(transport) end)
-    |> IO.inspect
 
     %__MODULE__{
       accounts: accounts,
@@ -63,6 +62,22 @@ defmodule Guppi.Config.Account do
   def set_account!(account_map) do
     account = Map.replace!(account_map, :uri, Sippet.URI.parse!(account_map.uri))
 
+    account = case Map.fetch(account_map, :ip) do
+      {:ok, _ip} ->
+        Map.replace!(
+          account,
+          :ip,
+          String.replace(account.ip, ~r|0\.0\.0\.0|, Guppi.Helpers.local_ip!())
+        )
+
+      _ ->
+        Map.replace!(
+          account,
+          :ip,
+          Guppi.Helpers.local_ip!()
+        )
+    end
+
     struct(__MODULE__, account)
   end
 
@@ -89,8 +104,6 @@ defmodule Guppi.Config.Transport do
         )
     end
 
-    IO.inspect transport
-
     transport = case Map.fetch(transport, :outbound_proxy) do
       {:ok, outbound_proxy} ->
         Map.replace!(
@@ -101,6 +114,8 @@ defmodule Guppi.Config.Transport do
       othr ->
         raise ArgumentError, "an outbound proxy is required, #{inspect(othr)}"
     end
+
+    transport
   end
 
   def resolve_proxy(record) do

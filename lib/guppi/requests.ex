@@ -1,4 +1,6 @@
 defmodule Guppi.Requests do
+  require Logger
+
   alias Guppi.Config.Account, as: Account
 
   alias Sippet.Message, as: Message
@@ -15,7 +17,7 @@ defmodule Guppi.Requests do
         }
   def register(account = %Account{}, cseq) do
     %Message{
-      start_line: RequestLine.new(:register, "#{account.uri.scheme}:#{account.ip}"),
+      start_line: RequestLine.new(:register, account.uri),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{account.ip}", account.uri.port},

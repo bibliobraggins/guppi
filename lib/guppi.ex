@@ -1,6 +1,9 @@
 defmodule Guppi do
   require Logger
 
+  alias Guppi.AgentSupervisor, as: AgentSupervisor
+  alias Guppi.AgentRegistry, as: AgentRegistry
+
   @moduledoc """
     The main Guppi interface module.
   """
@@ -8,9 +11,18 @@ defmodule Guppi do
   def start, do: start_link(nil)
 
   def start_link(_) do
-    children = init_config()
+
+    children = [
+      Guppi.Calls,
+      AgentRegistry,
+      AgentSupervisor
+    ]
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
+
+    Process.sleep 500
+
+    init_config()
   end
 
   def stop, do: stop(:normal)
@@ -22,39 +34,41 @@ defmodule Guppi do
   defp init_config() do
     config = Guppi.Config.read_config!()
 
-    agents =
-      Enum.into(
-        config.accounts,
-        [],
-        fn account ->
-          Supervisor.child_spec({Guppi.Agent, account},
-            id: String.to_atom(account.uri.userinfo),
-            restart: :transient
-          )
-        end
-      )
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_sippet()
+      end
+    )
 
-    sippets =
-      Enum.into(
-        config.transports,
-        [],
-        fn transport ->
-          sip_stack(transport)
-        end
-      )
+    Process.sleep 50
 
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_transport(transport)
+      end
+    )
 
-    transports =
-      Enum.into(
-        config.transports,
-        [],
-        fn transport ->
-          setup_transport(transport)
-        end
-      )
+    Process.sleep 50
 
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_core() |> IO.inspect
+      end
+    )
 
-    [Guppi.Calls, Guppi.AgentRegistry, transports, agents]
+    Process.sleep 50
+
+    Enum.each(
+    config.accounts,
+      fn account -> AgentSupervisor.start_agent(account, sip_stack(account.transport)) end
+    )
+
   end
 
   def restart do
@@ -63,24 +77,8 @@ defmodule Guppi do
     start()
   end
 
-  def sip_stack(transport) do
-    name = Integer.to_string(transport.port) |> String.to_atom()
-
-    Supervisor.child_spec({Sippet, name: name}, [])
-  end
-
-  def setup_transport(transport) do
-    name = Integer.to_string(transport.port) |> String.to_atom()
-    Supervisor.child_spec(
-      {
-        Guppi.Transport,
-        name: name,
-        address: transport.ip,
-        port: transport.port,
-        proxy: transport.outbound_proxy
-      },
-      []
-    )
+  def sip_stack(port) when is_integer(port) and port > 0 and port < 65536 do
+    Integer.to_string(port) |> String.to_atom()
   end
 
 end

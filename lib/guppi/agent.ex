@@ -4,7 +4,7 @@ defmodule Guppi.Agent do
   require Logger
 
   alias Guppi.Requests, as: Requests
-  alias Guppi.RegistrationScheduler, as: RegistrationScheduler
+  alias Guppi.RegistrationHandler, as: RegistrationHandler
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
@@ -20,13 +20,12 @@ defmodule Guppi.Agent do
     Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
 
-  def start_link(account) do
-    agent_name = String.to_atom(account.uri.userinfo)
+  def start_link([account: account, transport: transport]) do
 
-    transport = set_transport_name(account.local_port)
+    name = String.to_atom(account.uri.userinfo)
 
     # silly mechanism to catch next agent state
-    init_state = get_init_state(account)
+    init_state = get_init_state(account.register)
 
     # start the SIP agent
     GenServer.start_link(
@@ -35,24 +34,16 @@ defmodule Guppi.Agent do
         account: account,
         state: init_state,
         transport: transport,
-        name: agent_name,
+        name: name,
         cseq: 0,
-        mwi: nil
+        messages_waiting: nil
       },
-      name: agent_name
+      name: name
     )
   end
 
-  defp set_transport_name(nil), do: :"5060"
-
-  defp set_transport_name(input) when is_integer(input) and input > 0 and input < 65536 do
-    input
-    |> Integer.to_string()
-    |> String.to_atom()
-  end
-
-  defp get_init_state(account) do
-    case account.register do
+  defp get_init_state(register) do
+    case register do
       true ->
         :register
 
@@ -71,7 +62,7 @@ defmodule Guppi.Agent do
     # on initialization, should we immediately register or are we clear to transmit?
     case agent.state do
       :register ->
-        RegistrationScheduler.start_link(agent)
+        RegistrationHandler.start_link(agent)
         {:noreply, agent}
 
       _ ->
@@ -91,7 +82,7 @@ defmodule Guppi.Agent do
     request =
       case cseq do
         {_, :register} ->
-          RegistrationScheduler.make_register(agent)
+          RegistrationHandler.make_register(agent)
 
         _ ->
           raise RuntimeError,

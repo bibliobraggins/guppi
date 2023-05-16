@@ -2,7 +2,7 @@ defmodule Guppi.AgentRegistry do
   use GenServer
 
   # Client API #
-  def start_link do
+  def start_link([]) do
     GenServer.start_link(__MODULE__, nil, name: :agent_registry)
   end
 
