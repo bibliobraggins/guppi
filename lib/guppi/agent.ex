@@ -173,8 +173,6 @@ defmodule Guppi.Agent do
 
         ack_call(request.headers.call_id, agent, sdp_offer)
 
-
-
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
 
       {:error, reason} ->
@@ -195,7 +193,8 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_cast({:refer, %Message{} = request, _key}, agent) do
-    Logger.debug("We got a REFER and shouldn't have?: #{inspect(request)} received a REFER")
+    Logger.warn("We got a REFER and shouldn't have?: #{inspect(request)}")
+
     {:noreply, agent}
   end
 
@@ -238,10 +237,9 @@ defmodule Guppi.Agent do
   defp ack_call(call_id, agent, sdp_offer) do
     call = %Guppi.Call{} = Guppi.Calls.get(call_id)
 
-    ack = Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
-    Logger.warn(to_string(ack))
+    Sippet.send(agent.transport, Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer)))
 
-    Sippet.send(agent.transport, ack)
+    :ok
   end
 
   defp drop_call(call_id) do

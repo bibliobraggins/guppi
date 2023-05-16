@@ -42,8 +42,6 @@ defmodule Guppi do
       end
     )
 
-    Process.sleep 50
-
     Enum.each(
       config.transports,
       fn transport ->
@@ -52,21 +50,18 @@ defmodule Guppi do
       end
     )
 
-    Process.sleep 50
-
     Enum.each(
       config.transports,
       fn transport ->
         sip_stack(transport.port)
-        |> AgentSupervisor.start_core() |> IO.inspect
+        |> AgentSupervisor.start_core()
       end
     )
 
-    Process.sleep 50
-
     Enum.each(
     config.accounts,
-      fn account -> AgentSupervisor.start_agent(account, sip_stack(account.transport)) end
+      fn account ->
+        AgentSupervisor.start_agent(account, sip_stack(account.transport)) end
     )
 
   end
