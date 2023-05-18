@@ -1,6 +1,9 @@
 defmodule Guppi do
   require Logger
 
+  alias Guppi.AgentSupervisor, as: AgentSupervisor
+  alias Guppi.AgentRegistry, as: AgentRegistry
+
   @moduledoc """
     The main Guppi interface module.
   """
@@ -8,11 +11,18 @@ defmodule Guppi do
   def start, do: start_link(nil)
 
   def start_link(_) do
-    Registry.start_link(keys: :unique, name: Guppi.Registry)
 
-    children = init_accounts()
+    children = [
+      Guppi.Calls,
+      AgentRegistry,
+      AgentSupervisor
+    ]
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
+
+    Process.sleep 500
+
+    init_config()
   end
 
   def stop, do: stop(:normal)
@@ -21,31 +31,49 @@ defmodule Guppi do
     Supervisor.stop(__MODULE__, :normal)
   end
 
-  defp init_accounts() do
-    children =
-      Enum.into(
-        Guppi.Account.read_config!(),
-        [],
-        fn account ->
-          Supervisor.child_spec({Guppi.Agent, account},
-            id: account.uri.userinfo,
-            restart: :transient
-          )
-        end
-      )
+  defp init_config() do
+    config = Guppi.Config.read_config!()
 
-    [Guppi.Calls | children]
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_sippet()
+      end
+    )
+
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_transport(transport)
+      end
+    )
+
+    Enum.each(
+      config.transports,
+      fn transport ->
+        sip_stack(transport.port)
+        |> AgentSupervisor.start_core()
+      end
+    )
+
+    Enum.each(
+    config.accounts,
+      fn account ->
+        AgentSupervisor.start_agent(account, sip_stack(account.transport)) end
+    )
+
   end
-
-  def register(port, name) do
-    Registry.register(Guppi.Registry, port, name)
-  end
-
-  def count, do: Registry.count(Guppi.Registry)
 
   def restart do
     stop(:normal)
     Process.sleep(5)
     start()
   end
+
+  def sip_stack(port) when is_integer(port) and port > 0 and port < 65536 do
+    Integer.to_string(port) |> String.to_atom()
+  end
+
 end

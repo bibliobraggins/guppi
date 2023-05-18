@@ -1,5 +1,6 @@
 defmodule Guppi.Core do
   use Sippet.Core
+  use GenServer
 
   require Logger
 
@@ -19,6 +20,18 @@ defmodule Guppi.Core do
     the respective Sippet :name and Transport :name fields.
   """
 
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
+  end
+
+  @impl true
+  def init(opts) do
+    Sippet.register_core(opts[:name], Guppi.Core)
+
+    {:ok, nil}
+  end
+
+  @impl true
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
     Logger.debug(
@@ -29,6 +42,7 @@ defmodule Guppi.Core do
     :ok
   end
 
+  @impl true
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
     Logger.debug(
       "#{inspect(incoming_request.start_line.method)} From: #{inspect(incoming_request.headers.from)}"
@@ -41,6 +55,7 @@ defmodule Guppi.Core do
   end
 
   # triggered by authentication challenges.
+  @impl true
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         _client_key
@@ -51,6 +66,7 @@ defmodule Guppi.Core do
     # DON'T implicitly returon :ok or we break the auth flow
   end
 
+  @impl true
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         client_key
@@ -60,14 +76,16 @@ defmodule Guppi.Core do
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
+  @impl true
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         client_key
       ) do
-    Logger.debug("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
+    Logger.warn("#{inspect(status_code)} From: #{inspect(incoming_response.headers.from)}")
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
+  @impl true
   def receive_error(error_reason, _client_or_server_key) do
     Logger.warn("Received Error: #{inspect(error_reason)}")
   end
@@ -75,10 +93,6 @@ defmodule Guppi.Core do
   defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)
 
   defp route_agent(%Sippet.URI{} = uri) do
-    case Registry.lookup(Guppi.Registry, uri.port) do
-      [{pid, _agent}] when is_pid(pid) ->
-        pid
-        # [] -> [] # shouldn't even be possible tbh. refactor maybe?
-    end
+    String.to_existing_atom(uri.userinfo)
   end
 end

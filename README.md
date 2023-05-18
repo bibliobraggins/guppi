@@ -17,12 +17,17 @@ example configuration:
   [
     {
       "register": true,
-      "uri":"sip:username@0.0.0.0",
+      "uri":"sip:username@sip_provider.com",
       "sip_user":"username",
       "sip_password":"**secret**",
-      "ip": "0.0.0.0",
-      "local_port": "5060"
+      "transport": "5060"
       "realm":"sip_provider.com",
+    }
+  ],
+  "transports": [
+    {
+      "ip": "0.0.0.0",
+      "port": 5060,
       "outbound_proxy":{
         "dns":"A",
         "host":"proxy.sip_provider.com",
@@ -33,6 +38,8 @@ example configuration:
 }
 ```
 Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
+
+To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
 
 ## Installation
 
