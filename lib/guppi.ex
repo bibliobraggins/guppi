@@ -11,7 +11,6 @@ defmodule Guppi do
   def start, do: start_link(nil)
 
   def start_link(_) do
-
     children = [
       Guppi.Calls,
       AgentRegistry,
@@ -20,7 +19,7 @@ defmodule Guppi do
 
     Supervisor.start_link(children, strategy: :one_for_all, name: Guppi)
 
-    Process.sleep 500
+    Process.sleep(500)
 
     init_config()
   end
@@ -59,11 +58,11 @@ defmodule Guppi do
     )
 
     Enum.each(
-    config.accounts,
+      config.accounts,
       fn account ->
-        AgentSupervisor.start_agent(account, sip_stack(account.transport)) end
+        AgentSupervisor.start_agent(account, sip_stack(account.transport))
+      end
     )
-
   end
 
   def restart do
@@ -75,5 +74,4 @@ defmodule Guppi do
   def sip_stack(port) when is_integer(port) and port > 0 and port < 65536 do
     Integer.to_string(port) |> String.to_atom()
   end
-
 end

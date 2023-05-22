@@ -22,8 +22,8 @@ defmodule Guppi.AgentRegistry do
         registry = Map.put(registry, key, pid)
         {:reply, :yes, registry}
 
-      _ -> {:reply, :no, registry}
+      _ ->
+        {:reply, :no, registry}
     end
   end
-
 end

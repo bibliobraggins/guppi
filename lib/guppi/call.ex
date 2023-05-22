@@ -14,7 +14,8 @@ defmodule Guppi.Call do
     :id,
     :from,
     :to,
-    :via
+    :via,
+    :session_id
   ]
 
   def new(call_id, {from_name, from_uri, from_tag}, {to_name, to_uri, to_tag}, [

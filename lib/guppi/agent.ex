@@ -20,8 +20,7 @@ defmodule Guppi.Agent do
     Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
 
-  def start_link([account: account, transport: transport]) do
-
+  def start_link(account: account, transport: transport) do
     name = String.to_atom(account.uri.userinfo)
 
     # silly mechanism to catch next agent state
@@ -105,7 +104,6 @@ defmodule Guppi.Agent do
             {:noreply, Map.replace(agent, :state, :idle)}
 
           _ ->
-
             {:noreply, Map.replace(agent, :state, :registered)}
         end
 
@@ -162,7 +160,6 @@ defmodule Guppi.Agent do
           agent.transport,
           response
         )
-
 
         create_call(
           request.headers.call_id,
@@ -237,7 +234,10 @@ defmodule Guppi.Agent do
   defp ack_call(call_id, agent, sdp_offer) do
     call = %Guppi.Call{} = Guppi.Calls.get(call_id)
 
-    Sippet.send(agent.transport, Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer)))
+    Sippet.send(
+      agent.transport,
+      Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
+    )
 
     :ok
   end

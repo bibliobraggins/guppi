@@ -16,8 +16,7 @@ defmodule Guppi.AgentSupervisor do
   def start_agent(account, transport) do
     spec = {
       Guppi.Agent,
-      account: account,
-      transport: transport
+      account: account, transport: transport
     }
 
     DynamicSupervisor.start_child(__MODULE__, spec)
@@ -35,10 +34,7 @@ defmodule Guppi.AgentSupervisor do
   def start_transport(name, transport) do
     spec = {
       Guppi.Transport,
-      name: name,
-      address: transport.ip,
-      port: transport.port,
-      proxy: transport.outbound_proxy
+      name: name, address: transport.ip, port: transport.port, proxy: transport.outbound_proxy
     }
 
     DynamicSupervisor.start_child(__MODULE__, spec)
