@@ -1,6 +1,8 @@
 defmodule Guppi.AgentSupervisor do
   use DynamicSupervisor
 
+  require Logger
+
   def start_link([]) do
     DynamicSupervisor.start_link(__MODULE__, nil, name: __MODULE__)
   end
@@ -19,7 +21,7 @@ defmodule Guppi.AgentSupervisor do
       account: account, transport: transport
     }
 
-    DynamicSupervisor.start_child(__MODULE__, spec)
+    DynamicSupervisor.start_child(__MODULE__, spec) |> IO.inspect()
   end
 
   def start_sippet(name) do

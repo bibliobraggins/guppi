@@ -46,6 +46,7 @@ defmodule Guppi.Config.Account do
     :sip_password,
     :extension,
     :display_name,
+    :retries,
     :registration_timer,
     :subscription_timer,
     :refresh_timer,

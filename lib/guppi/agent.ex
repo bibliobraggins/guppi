@@ -53,35 +53,40 @@ defmodule Guppi.Agent do
 
   @impl true
   def init(agent) do
-    {:ok, agent, {:continue, nil}}
-  end
+    children = [
+      %{
+        id: RegistrationHandler,
+        start: {
+          RegistrationHandler,
+          :start_link,
+          [
+            [
+              name: agent.name,
+              cseq: 0,
+              timer: agent.account.registration_timer,
+              retries: agent.account.retries
+            ]
+          ]
+        }
+      }
+    ]
 
-  @impl true
-  def handle_continue(nil, agent) do
-    # on initialization, should we immediately register or are we clear to transmit?
-    case agent.state do
-      :register ->
-        RegistrationHandler.start_link(agent)
-        {:noreply, agent}
+    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_all)
 
-      _ ->
-        nil
-    end
-
-    # implement blf subscription set up here
-
-    {:noreply, agent}
+    {:ok, Map.put_new(agent, :children, pid)}
   end
 
   @impl true
   def handle_info(
-        {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: cseq}} = challenge},
+        {:authenticate,
+         %Message{start_line: %StatusLine{}, headers: %{cseq: {cseq, method}}} = challenge},
         agent
-      ) do
+      )
+      when is_integer(cseq) and is_atom(method) do
     request =
-      case cseq do
-        {_, :register} ->
-          RegistrationHandler.make_register(agent)
+      case method do
+        :register ->
+          Requests.register(agent.account, cseq)
 
         _ ->
           raise RuntimeError,
@@ -110,6 +115,8 @@ defmodule Guppi.Agent do
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
     end
+
+    {:noreply, agent}
   end
 
   @impl true
@@ -120,10 +127,14 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_info(:register, agent) do
-    Sippet.send(agent.transport, Requests.register(agent.account, agent.cseq))
+  def handle_info({cseq, :register}, agent) do
+    msg = Requests.register(agent.account, cseq)
 
-    {:noreply, agent}
+    Logger.debug("Sending Registration: #{inspect(msg)}")
+
+    Sippet.send(agent.transport, msg)
+
+    {:noreply, Map.replace(agent, :cseq, cseq + 1)}
   end
 
   @impl true
