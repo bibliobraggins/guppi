@@ -4,8 +4,6 @@ defmodule Guppi.RegistrationHandler do
   require Logger
 
   def start_link(opts) do
-    IO.puts("starting reg handler for #{opts[:name]}")
-
     agent =
       case Keyword.fetch(opts, :name) do
         {:ok, agent} ->
@@ -26,9 +24,8 @@ defmodule Guppi.RegistrationHandler do
 
     retries =
       case Keyword.fetch(opts, :retries) do
-        {:ok, retries} when is_integer(cseq) ->
+        {:ok, retries} when is_integer(retries) ->
           retries
-
         _ ->
           5
       end
@@ -66,7 +63,7 @@ defmodule Guppi.RegistrationHandler do
 
   @impl true
   def handle_info(:register, state) do
-    Logger.debug("Register attempt #{state.retries}", state.agent)
+    Logger.debug("Register attempt #{state.retries}: #{state.agent}")
 
     send_register(state.agent, state.cseq)
 
@@ -80,4 +77,5 @@ defmodule Guppi.RegistrationHandler do
   defp send_register(agent, cseq) do
     Process.send(agent, {cseq, :register}, [])
   end
+
 end

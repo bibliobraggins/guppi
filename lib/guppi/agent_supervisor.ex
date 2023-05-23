@@ -21,7 +21,7 @@ defmodule Guppi.AgentSupervisor do
       account: account, transport: transport
     }
 
-    DynamicSupervisor.start_child(__MODULE__, spec) |> IO.inspect()
+    DynamicSupervisor.start_child(__MODULE__, spec)
   end
 
   def start_sippet(name) do

@@ -130,7 +130,7 @@ defmodule Guppi.Agent do
   def handle_info({cseq, :register}, agent) do
     msg = Requests.register(agent.account, cseq)
 
-    Logger.debug("Sending Registration: #{inspect(msg)}")
+    Logger.debug("Sending Registration: #{to_string(msg)}")
 
     Sippet.send(agent.transport, msg)
 
