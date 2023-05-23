@@ -26,6 +26,7 @@ defmodule Guppi.RegistrationHandler do
       case Keyword.fetch(opts, :retries) do
         {:ok, retries} when is_integer(retries) ->
           retries
+
         _ ->
           5
       end
@@ -42,7 +43,13 @@ defmodule Guppi.RegistrationHandler do
 
     Logger.log(:debug, "starting Registration Handler for user: #{opts[:agent]}")
 
-    GenServer.start_link(__MODULE__, %{agent: agent, cseq: cseq, retries: retries, timer: timer})
+    GenServer.start_link(__MODULE__, %{
+      agent: agent,
+      cseq: cseq,
+      retries: retries,
+      timer: timer,
+      registered: false
+    })
   end
 
   @impl true
@@ -77,5 +84,4 @@ defmodule Guppi.RegistrationHandler do
   defp send_register(agent, cseq) do
     Process.send(agent, {cseq, :register}, [])
   end
-
 end

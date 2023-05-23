@@ -173,13 +173,18 @@ defmodule Guppi.Agent do
         )
 
         create_call(
-          request.headers.call_id,
+          call_id = request.headers.call_id,
           request.headers.from,
           request.headers.to,
           request.headers.via
         )
 
-        ack_call(request.headers.call_id, agent, sdp_offer)
+        call = %Guppi.Call{} = Guppi.Calls.get(call_id)
+
+        Sippet.send(
+          agent.transport,
+          Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
+        )
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
 
@@ -240,17 +245,6 @@ defmodule Guppi.Agent do
 
   defp create_call(call_id, from, to, via) do
     Guppi.Calls.create(call_id, from, to, via)
-  end
-
-  defp ack_call(call_id, agent, sdp_offer) do
-    call = %Guppi.Call{} = Guppi.Calls.get(call_id)
-
-    Sippet.send(
-      agent.transport,
-      Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
-    )
-
-    :ok
   end
 
   defp drop_call(call_id) do
