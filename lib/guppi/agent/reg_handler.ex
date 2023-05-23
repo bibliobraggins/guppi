@@ -6,42 +6,38 @@ defmodule Guppi.RegistrationHandler do
   def start_link(opts) do
     agent =
       case Keyword.fetch(opts, :name) do
+        {:ok, nil} ->
+          raise ArgumentError, "Agent name not provided"
         {:ok, agent} ->
           agent
-
-        _ ->
-          raise ArgumentError, "Agent name not provided"
       end
 
     cseq =
       case Keyword.fetch(opts, :cseq) do
+        {:ok, nil} ->
+          0
         {:ok, cseq} when is_integer(cseq) ->
           cseq
-
-        _ ->
-          0
       end
 
     retries =
       case Keyword.fetch(opts, :retries) do
+        {:ok, nil} ->
+          5
         {:ok, retries} when is_integer(retries) ->
           retries
-
-        _ ->
-          5
       end
 
     timer =
       case Keyword.fetch(opts, :timer) do
+        {:ok, nil} ->
+          360_000
         {:ok, timer} when is_integer(cseq) ->
           # seconds
           timer * 100
-
-        _ ->
-          360_000
       end
 
-    Logger.log(:debug, "starting Registration Handler for user: #{opts[:agent]}")
+    Logger.log(:debug, "starting Registration Handler for user: #{agent}")
 
     GenServer.start_link(__MODULE__, %{
       agent: agent,
@@ -77,8 +73,14 @@ defmodule Guppi.RegistrationHandler do
     {:noreply, state}
   end
 
+  @impl true
+  def terminate(_, _) do
+    Logger.warn("WHY DID MY GENSERVER STOP")
+  end
+
   defp schedule_registration(timer) when is_integer(timer) do
-    Process.send_after(self(), :register, timer)
+    IO.inspect("timer: #{timer} seconds")
+    :timer.send_interval(timer, :register)
   end
 
   defp send_register(agent, cseq) do
