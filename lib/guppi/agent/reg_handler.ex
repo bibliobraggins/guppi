@@ -8,6 +8,7 @@ defmodule Guppi.RegistrationHandler do
       case Keyword.fetch(opts, :name) do
         {:ok, nil} ->
           raise ArgumentError, "Agent name not provided"
+
         {:ok, agent} ->
           agent
       end
@@ -16,6 +17,7 @@ defmodule Guppi.RegistrationHandler do
       case Keyword.fetch(opts, :cseq) do
         {:ok, nil} ->
           0
+
         {:ok, cseq} when is_integer(cseq) ->
           cseq
       end
@@ -24,6 +26,7 @@ defmodule Guppi.RegistrationHandler do
       case Keyword.fetch(opts, :retries) do
         {:ok, nil} ->
           5
+
         {:ok, retries} when is_integer(retries) ->
           retries
       end
@@ -32,6 +35,7 @@ defmodule Guppi.RegistrationHandler do
       case Keyword.fetch(opts, :timer) do
         {:ok, nil} ->
           360_000
+
         {:ok, timer} when is_integer(cseq) ->
           # seconds
           timer * 100

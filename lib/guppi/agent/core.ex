@@ -59,7 +59,6 @@ defmodule Guppi.Core do
         _client_key
       )
       when status_code in [401, 407] do
-
     Logger.debug("Received: \n#{to_string(incoming_response)}")
 
     send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})

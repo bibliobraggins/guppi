@@ -76,8 +76,8 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_info({:challenge, %Message{headers: %{cseq: {cseq, method}}} = challenge}, agent) when is_integer(cseq) and is_atom(method) do
-
+  def handle_info({:challenge, %Message{headers: %{cseq: {cseq, method}}} = challenge}, agent)
+      when is_integer(cseq) and is_atom(method) do
     agent = Map.replace!(agent, :state, authenticate(challenge, agent))
 
     {:noreply, agent}
@@ -234,13 +234,15 @@ defmodule Guppi.Agent do
   end
 
   def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
-
     request = Requests.message(method, agent.account, cseq)
 
     {:ok, auth_req} =
       DigestAuth.make_request(
-        request, challenge, fn _ ->
-          {:ok, agent.account.sip_user, agent.account.sip_password} end,
+        request,
+        challenge,
+        fn _ ->
+          {:ok, agent.account.sip_user, agent.account.sip_password}
+        end,
         []
       )
 
@@ -259,7 +261,6 @@ defmodule Guppi.Agent do
       {:error, reason} ->
         Logger.warn("could not send auth request: #{reason}")
     end
-
   end
 
   def status(username) do
