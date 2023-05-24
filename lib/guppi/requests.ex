@@ -13,10 +13,7 @@ defmodule Guppi.Requests do
   """
 
   def message(method, account, cseq) do
-    case method do
-      :register ->
-        register(account, cseq)
-    end
+    Kernel.apply(__MODULE__, method, [account, cseq])
   end
 
   def register(account = %Account{}, cseq) do
