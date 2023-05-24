@@ -8,7 +8,6 @@ defmodule Guppi.Agent do
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
-  alias Sippet.Message.StatusLine, as: StatusLine
   alias Sippet.DigestAuth, as: DigestAuth
 
   @moduledoc """
