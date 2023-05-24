@@ -12,9 +12,13 @@ defmodule Guppi.Requests do
     here we store references to most if not all the request building.
   """
 
-  @spec register(%Account{register: true}, cseq :: non_neg_integer()) :: %Message{
-          start_line: %RequestLine{method: :register}
-        }
+  def message(method, account, cseq) do
+    case method do
+      :register ->
+        register(account, cseq)
+    end
+  end
+
   def register(account = %Account{}, cseq) do
     %Message{
       start_line: RequestLine.new(:register, account.uri),

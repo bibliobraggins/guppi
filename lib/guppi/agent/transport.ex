@@ -151,6 +151,8 @@ defmodule Guppi.Transport do
       ) do
     io_msg = Message.to_iodata(message)
 
+    Logger.debug("Sending: \n#{to_string(message)}")
+
     case message do
       %Message{start_line: %RequestLine{method: :register}} ->
         Logger.debug([

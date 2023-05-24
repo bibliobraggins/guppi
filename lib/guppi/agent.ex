@@ -77,44 +77,9 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_info(
-        {:authenticate,
-         %Message{start_line: %StatusLine{}, headers: %{cseq: {cseq, method}}} = challenge},
-        agent
-      )
-      when is_integer(cseq) and is_atom(method) do
-    request =
-      case method do
-        :register ->
-          Requests.register(agent.account, cseq)
+  def handle_info({:challenge, %Message{headers: %{cseq: {cseq, method}}} = challenge}, agent) when is_integer(cseq) and is_atom(method) do
 
-        _ ->
-          raise RuntimeError,
-                "#{agent.account.uri.userinfo} was challenged on a method we can't make yet"
-      end
-
-    {:ok, auth_req} =
-      DigestAuth.make_request(
-        request,
-        challenge,
-        fn _ -> {:ok, agent.account.sip_user, agent.account.sip_password} end,
-        []
-      )
-
-    case Sippet.send(agent.transport, Requests.via(auth_req)) do
-      :ok ->
-        receive do
-          {:authenticate, %Message{start_line: %StatusLine{}, headers: %{cseq: _cseq}}} ->
-            Logger.warn("Unable to Authenticate: #{agent.name}")
-            {:noreply, Map.replace(agent, :state, :idle)}
-
-          _ ->
-            {:noreply, Map.replace(agent, :state, :registered)}
-        end
-
-      {:error, reason} ->
-        Logger.warn("could not send auth request: #{reason}")
-    end
+    agent = Map.replace!(agent, :state, authenticate(challenge, agent))
 
     {:noreply, agent}
   end
@@ -129,8 +94,6 @@ defmodule Guppi.Agent do
   @impl true
   def handle_info({cseq, :register}, agent) do
     msg = Requests.register(agent.account, cseq)
-
-    Logger.debug("Sending Registration: #{to_string(msg)}")
 
     Sippet.send(agent.transport, msg)
 
@@ -269,6 +232,35 @@ defmodule Guppi.Agent do
 
         {:error, error}
     end
+  end
+
+  def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
+
+    request = Requests.message(method, agent.account, cseq)
+
+    {:ok, auth_req} =
+      DigestAuth.make_request(
+        request, challenge, fn _ ->
+          {:ok, agent.account.sip_user, agent.account.sip_password} end,
+        []
+      )
+
+    case Sippet.send(agent.transport, Requests.via(auth_req)) do
+      :ok ->
+        receive do
+          {:authenticate, %Message{headers: %{cseq: _cseq}}} ->
+            Logger.warn("Unable to Authenticate: #{agent.name}")
+            :auth_failed
+
+          _ ->
+            Logger.debug("Authenticated: #{agent.name}")
+            :authenticated
+        end
+
+      {:error, reason} ->
+        Logger.warn("could not send auth request: #{reason}")
+    end
+
   end
 
   def status(username) do
