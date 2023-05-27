@@ -19,6 +19,11 @@ defmodule Guppi.Agent do
     Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
 
+  @spec start_link([
+          {:account, atom | %{:register => boolean, :uri => atom | map, optional(any) => any}}
+          | {:transport, any},
+          ...
+        ]) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(account: account, transport: transport) do
     name = String.to_atom(account.uri.userinfo)
 
@@ -51,6 +56,11 @@ defmodule Guppi.Agent do
   end
 
   @impl true
+  @spec init(%{
+          :account => atom | %{:registration_timer => any, :retries => any, optional(any) => any},
+          :name => any,
+          optional(any) => any
+        }) :: {:ok, map}
   def init(agent) do
     children = [
       %{
@@ -233,6 +243,11 @@ defmodule Guppi.Agent do
     end
   end
 
+  @spec authenticate(
+          Sippet.Message.t(),
+          atom
+          | %{:account => any, :transport => atom, optional(any) => any}
+        ) :: :ok | {:error, any}
   def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
     request = Requests.message(method, agent.account, cseq)
 
@@ -246,21 +261,7 @@ defmodule Guppi.Agent do
         []
       )
 
-    case Sippet.send(agent.transport, Requests.via(auth_req)) do
-      :ok ->
-        receive do
-          {:authenticate, %Message{headers: %{cseq: _cseq}}} ->
-            Logger.warn("Unable to Authenticate: #{agent.name}")
-            :auth_failed
-
-          _ ->
-            Logger.debug("Authenticated: #{agent.name}")
-            :authenticated
-        end
-
-      {:error, reason} ->
-        Logger.warn("could not send auth request: #{reason}")
-    end
+    Sippet.send(agent.transport, Requests.via(auth_req))
   end
 
   def status(username) do

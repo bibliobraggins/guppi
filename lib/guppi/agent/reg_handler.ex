@@ -3,6 +3,7 @@ defmodule Guppi.RegistrationHandler do
 
   require Logger
 
+  @spec start_link(keyword) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(opts) do
     agent =
       case Keyword.fetch(opts, :name) do
@@ -47,6 +48,7 @@ defmodule Guppi.RegistrationHandler do
       agent: agent,
       cseq: cseq,
       retries: retries,
+      max_retries: retries,
       timer: timer,
       registered: false
     })
@@ -69,12 +71,26 @@ defmodule Guppi.RegistrationHandler do
   end
 
   @impl true
+  def handle_info(:register, state = %{retries: 0}) do
+    Logger.debug("Register attempts #{state.retries}: #{state.agent}")
+
+    schedule_registration(state.timer)
+
+    {:noreply, Map.replace(state, :retries, state.max_retries)}
+  end
+
+  @impl true
   def handle_info(:register, state) do
-    Logger.debug("Register attempt #{state.retries}: #{state.agent}")
+    Logger.debug("Register attempts #{state.retries}: #{state.agent}")
 
-    send_register(state.agent, state.cseq)
+    case state.retries > 0 do
+      true ->
+        send_register(state.agent, state.cseq)
+        {:noreply, Map.replace(state, :retries, state.retries - 1)}
 
-    {:noreply, state}
+      false ->
+        {:noreply, state}
+    end
   end
 
   @impl true

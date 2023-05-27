@@ -15,14 +15,6 @@ defmodule Guppi.AgentSupervisor do
     )
   end
 
-  def start_agent(account, transport) do
-    spec = {
-      Guppi.Agent,
-      account: account, transport: transport
-    }
-
-    DynamicSupervisor.start_child(__MODULE__, spec)
-  end
 
   def start_sippet(name) do
     spec = {
@@ -50,4 +42,14 @@ defmodule Guppi.AgentSupervisor do
 
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
+
+  def start_agent(account, transport) do
+    spec = {
+      Guppi.Agent,
+      account: account, transport: transport
+    }
+
+    DynamicSupervisor.start_child(__MODULE__, spec)
+  end
+
 end
