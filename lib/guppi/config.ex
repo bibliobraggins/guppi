@@ -11,10 +11,13 @@ defmodule Guppi.Config do
     :transports
   ]
 
+  @spec read_config! :: %Guppi.Config{accounts: any, transports: any}
   def read_config!, do: read_config() |> parse_config!()
 
   defp read_config do
-    with {:ok, raw_config} <- File.read("./configuration.json"),
+    config_file = Application.get_env(:guppi, :config_file)
+
+    with {:ok, raw_config} <- File.read(config_file),
          {:ok, config} <- Jason.decode(raw_config, keys: :atoms) do
       config
     else
