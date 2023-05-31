@@ -99,7 +99,6 @@ defmodule Guppi.RegistrationHandler do
   end
 
   defp schedule_registration(timer) when is_integer(timer) do
-    IO.inspect("timer: #{timer} seconds")
     :timer.send_interval(timer, :register)
   end
 

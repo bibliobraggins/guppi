@@ -2,7 +2,6 @@ defmodule Guppi do
   require Logger
 
   alias Guppi.AgentSupervisor, as: AgentSupervisor
-  alias Guppi.AgentRegistry, as: AgentRegistry
 
   @moduledoc """
     The main Guppi interface module.
@@ -13,7 +12,6 @@ defmodule Guppi do
   def start_link(_) do
     children = [
       Guppi.Calls,
-      {Registry, keys: :unique, name: AgentRegistry},
       AgentSupervisor
     ]
 
