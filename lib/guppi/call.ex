@@ -10,37 +10,20 @@ defmodule Guppi.Call do
     based on the input Account data
   """
 
-  defstruct [
+  @enforce_keys [
     :id,
-    :from,
-    :to,
-    :via
+    :agent,
+    :peer_data
   ]
 
-  def new(call_id, {from_name, from_uri, from_tag}, {to_name, to_uri, to_tag}, [
-        {_v, transport, origin, %{"branch" => branch}} | _rest
-      ]) do
-    case from_tag do
-      %{} -> %{}
-    end
+  defstruct @enforce_keys
+
+  def new_call(call_id, name, [{_v, _transport, _origin, %{"branch" => _branch}} | _rest] = peer_data) do
 
     %__MODULE__{
       id: call_id,
-      from: %{
-        caller_id: from_name,
-        uri: from_uri,
-        tag: from_tag
-      },
-      to: %{
-        caller_id: to_name,
-        uri: to_uri,
-        tag: to_tag
-      },
-      via: %{
-        transport: transport,
-        origin: origin,
-        branch: branch
-      }
+      agent: name,
+      peer_data: peer_data
     }
   end
 end

@@ -146,8 +146,7 @@ defmodule Guppi.Agent do
 
         create_call(
           call_id = request.headers.call_id,
-          request.headers.from,
-          request.headers.to,
+          agent.name,
           request.headers.via
         )
 
@@ -215,8 +214,8 @@ defmodule Guppi.Agent do
     Logger.warn("WHY DID MY GENSERVER STOP")
   end
 
-  defp create_call(call_id, from, to, via) do
-    Guppi.Calls.create(call_id, from, to, via)
+  defp create_call(call_id, from, via) do
+    Guppi.Calls.create(call_id, from, via)
   end
 
   defp drop_call(call_id) do

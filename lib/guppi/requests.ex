@@ -43,9 +43,6 @@ defmodule Guppi.Requests do
     }
   end
 
-  @spec ack(%Account{}, cseq :: non_neg_integer(), %Guppi.Call{}, ExSDP.t()) :: %Message{
-          start_line: %RequestLine{method: :ack}
-        }
   def ack(account, cseq, call, sdp_offer) do
     %Message{
       start_line: RequestLine.new(:ack, "#{call.from.uri.scheme}:#{call.from.uri.host}"),
