@@ -13,7 +13,7 @@ defmodule Guppi do
   def start_link(_) do
     children = [
       Guppi.Calls,
-      AgentRegistry,
+      {Registry, keys: :unique, name: AgentRegistry},
       AgentSupervisor
     ]
 
