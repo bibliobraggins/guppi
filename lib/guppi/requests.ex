@@ -1,8 +1,6 @@
 defmodule Guppi.Requests do
   require Logger
 
-  alias Guppi.Config.Account, as: Account
-
   alias Sippet.Message, as: Message
   alias Sippet.URI, as: URI
   alias Sippet.Message.RequestLine, as: RequestLine
@@ -12,83 +10,83 @@ defmodule Guppi.Requests do
     here we store references to most if not all the request building.
   """
 
-  def message(method, account, cseq) do
-    Kernel.apply(__MODULE__, method, [account, cseq])
+  def message(method, opts) do
+    Kernel.apply(__MODULE__, method, [opts])
   end
 
-  def register(account = %Account{}, cseq) do
+  def register(opts) when is_list(opts) do
     %Message{
-      start_line: RequestLine.new(:register, account.uri),
+      start_line: RequestLine.new(:register, opts[:account].uri),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
+          {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {account.display_name,
-           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"),
+          {opts[:account].display_name,
+           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"),
            %{"tag" => Message.create_tag()}},
         to:
-          {account.display_name,
-           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
+          {opts[:account].display_name,
+           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
         contact:
-          {account.display_name,
-           URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}},
-        expires: account.registration_timer,
-        max_forwards: account.max_forwards,
-        cseq: {cseq, :register},
-        user_agent: "#{account.user_agent}",
+          {opts[:account].display_name,
+           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
+        expires: opts[:account].registration_timer,
+        max_forwards: opts[:account].max_forwards,
+        cseq: {opts[:cseq], :register},
+        user_agent: "#{opts[:account].user_agent}",
         call_id: Message.create_call_id()
       }
     }
   end
 
-  def ack(account, cseq, call, sdp_offer) do
+  def ack(opts) when is_list(opts) do
     %Message{
-      start_line: RequestLine.new(:ack, "#{call.from.uri.scheme}:#{call.from.uri.host}"),
+      start_line: RequestLine.new(:ack, "#{opts[:call].from.uri.scheme}:#{opts[:call].from.uri.host}"),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.ip}", account.uri.port}, %{"branch" => call.via.branch}}
+          {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port}, %{"branch" => opts[:call].via.branch}}
         ],
-        from: {"#{account.display_name}", call.to.uri, %{"tag" => Message.create_tag()}},
-        to: {call.from.caller_id, call.from.uri, call.from.tag},
-        contact: contact(account),
-        expires: account.registration_timer,
-        max_forwards: account.max_forwards,
-        cseq: {cseq, :ack},
-        user_agent: "#{account.user_agent}",
-        call_id: call.id
+        from: {"#{opts[:account].display_name}", opts[:call].to.uri, %{"tag" => Message.create_tag()}},
+        to: {opts[:call].from.caller_id, opts[:call].from.uri, opts[:call].from.tag},
+        contact: contact(opts[:account]),
+        expires: opts[:account].refresh_timer,
+        max_forwards: opts[:account].max_forwards,
+        cseq: {opts[:call], :ack},
+        user_agent: "#{opts[:account].user_agent}",
+        call_id: opts[:call].id
       },
-      body: sdp_offer
+      body: opts[:sdp_offer]
     }
   end
 
-  def subscribe(account, cseq, blf_uri) do
+  def subscribe(opts) when is_list(opts) do
     %Message{
-      start_line: RequestLine.new(:subscribe, "sip:" <> blf_uri),
+      start_line: RequestLine.new(:subscribe, "sip:" <> opts[:uri]),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{account.ip}", account.uri.port},
+          {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from: {
-          account.display_name,
-          account.uri,
+          opts[:account].display_name,
+          opts[:account].uri,
           %{"tag" => Message.create_tag()}
         },
         to: {
           "",
-          blf_uri,
+          opts[:uri],
           %{}
         },
-        contact: contact(account),
+        contact: contact(opts[:account].uri),
         event: "dialog",
         Accept: "application/dialog-info+xml",
-        expires: account.subscription_timer,
-        max_forwards: account.max_forwards,
-        cseq: {cseq, :subscribe},
-        user_agent: "#{account.user_agent}",
-        call_id: "#{blf_uri}_#{cseq}"
+        expires: opts[:account].subscription_timer,
+        max_forwards: opts[:account].max_forwards,
+        cseq: {opts[:cseq], :subscribe},
+        user_agent: "#{opts[:account].user_agent}",
+        call_id: "#{opts[:uri]}_#{opts[:cseq]}"
       }
     }
   end

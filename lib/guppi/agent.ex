@@ -102,7 +102,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_info({cseq, :register}, agent) do
-    msg = Requests.register(agent.account, cseq)
+    msg = Requests.message(:register, [account: agent.account, cseq: cseq])
 
     Sippet.send(agent.transport, msg)
 
@@ -115,7 +115,7 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:invite, request, server_key}, agent) do
+  def handle_cast({:invite, request = %Message{headers: %{cseq: {cseq, :invite}}}, server_key}, agent) do
     Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
 
     # sdp_string = to_string(Guppi.Media.fake_sdp())
@@ -154,7 +154,7 @@ defmodule Guppi.Agent do
 
         Sippet.send(
           agent.transport,
-          Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
+          Guppi.Requests.message(request.start_line.method, [account: agent.account, cseq: cseq, call: call, offer: to_string(sdp_offer)])
         )
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
@@ -248,7 +248,7 @@ defmodule Guppi.Agent do
           | %{:account => any, :transport => atom, optional(any) => any}
         ) :: :ok | {:error, any}
   def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
-    request = Requests.message(method, agent.account, cseq)
+    request = Requests.message(method, [account: agent.account, cseq: cseq])
 
     {:ok, auth_req} =
       DigestAuth.make_request(

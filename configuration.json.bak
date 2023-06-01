@@ -1,0 +1,31 @@
+{
+  "accounts":
+      [
+        {
+          "register": true,
+          "display_name": "",
+          "extension":"8999",
+          "refresh_timer":3600,
+          "registration_timer":3600,
+          "subscription_timer":3600,
+          "max_forwards":70,
+          "ip":"0.0.0.0",
+          "transport":5060,
+          "uri":"sip:oVn4HARqTDuew6Qn4pjSGw@sbcrtp.d2.alianza.com",
+          "sip_user":"oVn4HARqTDuew6Qn4pjSGw",
+          "sip_password":"F8HW8YY5",
+          "user_agent":"curl"
+        }
+      ],
+      "transports":[
+          {
+              "ip":"0.0.0.0",
+              "port":5060,
+              "protocol":"udp",
+              "outbound_proxy":{
+                  "type":"NAPTR",
+                  "domain":"sbcrtp.d2.alianza.com"
+          }
+        }
+      ]
+  }

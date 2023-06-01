@@ -34,9 +34,7 @@ defmodule Guppi.Core do
   @impl true
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, nil) do
     # This will happen when ACKs are received for a previous 200 OK we sent.
-    Logger.debug(
-      "#{inspect(incoming_request.start_line.method)} From: #{inspect(incoming_request.headers.from)}"
-    )
+    Logger.info("Received: \n#{to_string(incoming_request)}")
 
     # send(route_agent(incoming_request.headers.to), {incoming_request.start_line.method, incoming_request})
     :ok
@@ -44,7 +42,7 @@ defmodule Guppi.Core do
 
   @impl true
   def receive_request(%Message{start_line: %RequestLine{}} = incoming_request, server_key) do
-    Logger.debug("Received: \n#{to_string(incoming_request)}")
+    Logger.info("Received: \n#{to_string(incoming_request)}")
 
     GenServer.cast(
       route_agent(incoming_request.start_line.request_uri),
@@ -57,12 +55,15 @@ defmodule Guppi.Core do
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         _client_key
-      )
-      when status_code in [401, 407] do
-    Logger.debug("Received: \n#{to_string(incoming_response)}")
+      ) when status_code in 400..499 do
+        Logger.info("Received: \n#{to_string(incoming_response)}")
 
-    send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})
-    # DON'T implicitly return :ok or we break the auth flow
+        case status_code do
+          status_code when status_code in [401,407] ->
+            send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})
+          423 ->
+            :ok
+        end
   end
 
   @impl true
