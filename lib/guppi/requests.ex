@@ -63,7 +63,7 @@ defmodule Guppi.Requests do
 
   def subscribe(opts) when is_list(opts) do
     %Message{
-      start_line: RequestLine.new(:subscribe, "sip:" <> opts[:uri]),
+      start_line: RequestLine.new(:subscribe, "sip:" <> opts[:blf_uri]),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
@@ -76,7 +76,7 @@ defmodule Guppi.Requests do
         },
         to: {
           "",
-          opts[:uri],
+          opts[:blf_uri],
           %{}
         },
         contact: contact(opts[:account].uri),
@@ -86,7 +86,7 @@ defmodule Guppi.Requests do
         max_forwards: opts[:account].max_forwards,
         cseq: {opts[:cseq], :subscribe},
         user_agent: "#{opts[:account].user_agent}",
-        call_id: "#{opts[:uri]}_#{opts[:cseq]}"
+        call_id: "#{opts[:blf_uri]}_#{opts[:cseq]}"
       }
     }
   end

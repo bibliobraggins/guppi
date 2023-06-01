@@ -6,21 +6,12 @@ defmodule Guppi.RegistrationHandler do
   @spec start_link(keyword) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(opts) do
     agent =
-      case Keyword.fetch(opts, :name) do
+      case Keyword.fetch(opts, :agent) do
         {:ok, nil} ->
           raise ArgumentError, "Agent name not provided"
 
         {:ok, agent} ->
           agent
-      end
-
-    cseq =
-      case Keyword.fetch(opts, :cseq) do
-        {:ok, nil} ->
-          0
-
-        {:ok, cseq} when is_integer(cseq) ->
-          cseq
       end
 
     retries =
@@ -37,8 +28,7 @@ defmodule Guppi.RegistrationHandler do
         {:ok, nil} ->
           360_000
 
-        {:ok, timer} when is_integer(cseq) ->
-          # seconds
+        {:ok, timer} when is_integer(timer) ->
           timer * 100
       end
 
@@ -46,7 +36,6 @@ defmodule Guppi.RegistrationHandler do
 
     GenServer.start_link(__MODULE__, %{
       agent: agent,
-      cseq: cseq,
       retries: retries,
       max_retries: retries,
       timer: timer,
@@ -58,20 +47,20 @@ defmodule Guppi.RegistrationHandler do
   def init(state) do
     schedule_registration(state.timer)
 
-    {:ok, state, {:continue, :register}}
+    {:ok, state, {:continue, :init}}
   end
 
   @impl true
-  def handle_continue(:register, state) do
-    send_register(state.agent, state.cseq)
+  def handle_continue(:init, state) do
+    send_register(state.agent)
 
-    Process.send_after(self(), :register, state.timer, [])
+    Process.send_after(self(), :work, state.timer, [])
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info(:register, state = %{retries: 0}) do
+  def handle_info(:work, state = %{retries: 0}) do
     Logger.debug("Register attempts #{state.retries}: #{state.agent}")
 
     schedule_registration(state.timer)
@@ -80,12 +69,12 @@ defmodule Guppi.RegistrationHandler do
   end
 
   @impl true
-  def handle_info(:register, state) do
+  def handle_info(:work, state) do
     Logger.debug("Register attempts #{state.retries}: #{state.agent}")
 
     case state.retries > 0 do
       true ->
-        send_register(state.agent, state.cseq)
+        send_register(state.agent)
         {:noreply, Map.replace(state, :retries, state.retries - 1)}
 
       false ->
@@ -102,7 +91,7 @@ defmodule Guppi.RegistrationHandler do
     :timer.send_interval(timer, :register)
   end
 
-  defp send_register(agent, cseq) do
-    Process.send(agent, {cseq, :register}, [])
+  defp send_register(agent) do
+    Process.send(agent, :register, [])
   end
 end

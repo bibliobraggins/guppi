@@ -72,14 +72,14 @@ defmodule Guppi.Core do
         client_key
       )
       when status_code in [200] do
-    Logger.debug("Received: \n#{to_string(incoming_response)}")
+    Logger.info("Received: \n#{to_string(incoming_response)}")
 
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
 
   @impl true
   def receive_response(%Message{start_line: %StatusLine{}} = incoming_response, client_key) do
-    Logger.debug("Received: #{to_string(incoming_response)}")
+    Logger.info("Received: #{to_string(incoming_response)}")
 
     send(route_agent(incoming_response.headers.to), {:ok, incoming_response, client_key})
   end
