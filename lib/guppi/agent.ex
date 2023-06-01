@@ -27,15 +27,15 @@ defmodule Guppi.Agent do
   def start_link(account: account, transport: transport) do
     name = String.to_atom(account.uri.userinfo)
 
-    # silly mechanism to catch next agent state
-    init_state = get_init_state(account.register)
+    children = setup_children(name, account)
+    |> IO.inspect()
 
     # start the SIP agent
     GenServer.start_link(
       __MODULE__,
       %{
         account: account,
-        state: init_state,
+        state: nil,
         transport: transport,
         name: name,
         cseq: 0,
@@ -45,14 +45,53 @@ defmodule Guppi.Agent do
     )
   end
 
-  defp get_init_state(register) do
-    case register do
-      true ->
-        :register
+  defp setup_children(name, account) do
+    reg_worker =
+      if account.register == true do
+        reg_spec(name, account)
+      end
 
-      false ->
-        :idle
-    end
+    blf_workers =
+      case length(account.blf_uri_list) > 0 do
+        true ->
+          Enum.into(account.blf_uri_list, [], fn uri -> Sippet.URI.parse!(uri) |> blf_spec(name, account) end)
+        false ->
+          nil
+      end
+
+    IO.inspect [reg_worker | blf_workers]
+
+  end
+
+  defp reg_spec(name, account) do
+    %{
+      id: RegistrationHandler,
+      start: {
+        RegistrationHandler,
+        :start_link,
+        [[
+          agent: name,
+          timer: account.registration_timer,
+          retries: account.retries
+        ]]
+      }
+    }
+  end
+
+  defp blf_spec(blf_uri, name, account) do
+    %{
+      id: BlfHandler,
+      start: {
+        BlfHandler,
+        :start_link,
+        [[
+          agent: name,
+          blf_uri: blf_uri,
+          timer: account.registration_timer,
+          retries: account.retries
+        ]]
+      }
+    }
   end
 
   @impl true
@@ -68,16 +107,16 @@ defmodule Guppi.Agent do
         start: {
           RegistrationHandler,
           :start_link,
-          [
-            [
-              name: agent.name,
-              cseq: 0,
-              timer: agent.account.registration_timer,
-              retries: agent.account.retries
-            ]
-          ]
+          [[
+            agent: agent.name,
+            cseq: 0,
+            timer: agent.account.registration_timer,
+            retries: agent.account.retries
+          ]]
         }
-      }
+      },
+
+
     ]
 
     {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_all)
@@ -101,12 +140,12 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_info({cseq, :register}, agent) do
-    msg = Requests.register(agent.account, cseq)
+  def handle_info(:register, agent) do
+    msg = Requests.message(:register, [account: agent.account, cseq: agent.cseq])
 
     Sippet.send(agent.transport, msg)
 
-    {:noreply, Map.replace(agent, :cseq, cseq + 1)}
+    {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
   end
 
   @impl true
@@ -115,7 +154,7 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:invite, request, server_key}, agent) do
+  def handle_cast({:invite, request = %Message{headers: %{cseq: {cseq, :invite}}}, server_key}, agent) do
     Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
 
     # sdp_string = to_string(Guppi.Media.fake_sdp())
@@ -154,7 +193,7 @@ defmodule Guppi.Agent do
 
         Sippet.send(
           agent.transport,
-          Guppi.Requests.ack(agent.account, agent.cseq, call, to_string(sdp_offer))
+          Guppi.Requests.message(request.start_line.method, [account: agent.account, cseq: cseq, call: call, offer: to_string(sdp_offer)])
         )
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
@@ -248,7 +287,7 @@ defmodule Guppi.Agent do
           | %{:account => any, :transport => atom, optional(any) => any}
         ) :: :ok | {:error, any}
   def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
-    request = Requests.message(method, agent.account, cseq)
+    request = Requests.message(method, [account: agent.account, cseq: cseq])
 
     {:ok, auth_req} =
       DigestAuth.make_request(
@@ -275,4 +314,6 @@ defmodule Guppi.Agent do
 
     map
   end
+
+
 end

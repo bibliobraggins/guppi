@@ -62,7 +62,7 @@ defmodule Guppi.Config.Account do
     :user_agent,
     :outbound_proxy,
     :sdp,
-    :subscribes,
+    :blf_uri_list,
     :certificate
   ]
 
