@@ -49,7 +49,8 @@ defmodule Guppi.Requests do
           {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port}, %{"branch" => opts[:call].via.branch}}
         ],
         from: {"#{opts[:account].display_name}", opts[:call].to.uri, %{"tag" => Message.create_tag()}},
-        to: {opts[:call].from.caller_id, opts[:call].from.uri, opts[:call].from.tag},
+        to: {opts[:account].display_name,
+           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
         contact: contact(opts[:account]),
         expires: opts[:account].refresh_timer,
         max_forwards: opts[:account].max_forwards,
@@ -62,38 +63,32 @@ defmodule Guppi.Requests do
   end
 
   def subscribe(opts) when is_list(opts) do
-    %Message{
-      start_line: RequestLine.new(:subscribe, "sip:" <> opts[:blf_uri]),
+    subscribe = %Message{
+      start_line: RequestLine.new(:subscribe, opts[:blf_uri]),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
            %{"branch" => Message.create_branch()}}
         ],
-        from: {
-          opts[:account].display_name,
-          opts[:account].uri,
-          %{"tag" => Message.create_tag()}
-        },
-        to: {
-          "",
-          opts[:blf_uri],
-          %{}
-        },
-        contact: contact(opts[:account].uri),
+        from: {"#{opts[:account].display_name}", opts[:blf_uri], %{"tag" => Message.create_tag()}},
+        to: {opts[:blf_uri].userinfo, opts[:blf_uri], %{}},
+        contact: contact(opts[:account]),
         event: "dialog",
-        Accept: "application/dialog-info+xml",
+        accept: "application/dialog-info+xml",
         expires: opts[:account].subscription_timer,
         max_forwards: opts[:account].max_forwards,
         cseq: {opts[:cseq], :subscribe},
         user_agent: "#{opts[:account].user_agent}",
-        call_id: "#{opts[:blf_uri]}_#{opts[:cseq]}"
+        call_id: "#{opts[:blf_uri].authority}_#{opts[:cseq]}"
       }
     }
+    inspect(subscribe |> to_string())
+
+    subscribe
   end
 
   def contact(account) do
-    {account.display_name,
-     URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
+    {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
   end
 
   # updates cseq, via, and from headers for a given request.

@@ -5,11 +5,11 @@ defmodule Guppi.BlfHandler do
 
   def start_link(opts) do
     agent =
-      case Keyword.fetch(opts, :name) do
+      case Keyword.fetch(opts, :agent) do
         {:ok, nil} ->
           raise ArgumentError, "Agent name not provided"
 
-        {:ok, agent} when is_map(agent) ->
+        {:ok, agent} ->
           agent
       end
 
@@ -17,8 +17,8 @@ defmodule Guppi.BlfHandler do
       case Keyword.fetch(opts, :blf_uri) do
         {:ok, nil} ->
           raise ArgumentError, "blf target not provided"
-        {:ok, blf_uri = %Sippet.URI{}} ->
-          blf_uri
+        {:ok, blf_uri} ->
+          Sippet.URI.parse!(blf_uri)
       end
 
     retries =
@@ -41,25 +41,59 @@ defmodule Guppi.BlfHandler do
 
     Logger.log(:debug, "Starting Presence Handler for user: #{agent}")
 
-    GenServer.start_link(__MODULE__, {agent, blf_uri, timer, retries})
+    GenServer.start_link(
+      __MODULE__, %{
+        agent: agent,
+        blf_uri: blf_uri,
+        timer: timer,
+        retries: retries
+      })
+  end
+
+  defp schedule_subscribe(timer) when is_integer(timer) do
+    :timer.send_interval(timer, :subscribe)
+  end
+
+  defp send_subscribe(agent, blf_uri) do
+    Process.send(agent, {:subscribe, blf_uri}, [])
   end
 
   @impl true
-  def init({agent, blf_uri, timer, retries}) do
-    {:ok, {agent, blf_uri, timer, retries}, {:continue, :subscribe}}
+  def init(state) do
+    schedule_subscribe(state.timer)
+
+    {:ok, state, {:continue, :init}}
   end
 
   @impl true
-  def handle_continue(:subcribe, {agent, blf_uri, timer, retries}) do
-    send(agent, {:subscribe, blf_uri})
+  def handle_continue(:init, state) do
+    send_subscribe(state.agent, state.blf_uri)
 
-    {:noreply, {agent, blf_uri, timer, retries}, {:continue, :wait}}
+    Process.send_after(self(), :work, state.timer, [])
+
+    {:noreply, state}
   end
 
   @impl true
-  def handle_continue(:wait, {agent, blf_uri, timer, retries}) do
-    Process.sleep(timer)
+  def handle_info(:work, state = %{retries: 0}) do
+    Logger.debug("Register attempts #{state.retries}: #{state.agent}")
 
-    {:noreply, {agent, blf_uri, timer, retries}, {:continue, :subscribe}}
+    schedule_subscribe(state.timer)
+
+    {:noreply, Map.replace(state, :retries, state.max_retries)}
+  end
+
+  @impl true
+  def handle_info(:work, state) do
+    Logger.debug("Register attempts #{state.retries}: #{state.agent}")
+
+    case state.retries > 0 do
+      true ->
+        send_subscribe(state.agent, state.blf_uri)
+        {:noreply, Map.replace(state, :retries, state.retries - 1)}
+
+      false ->
+        {:noreply, state}
+    end
   end
 end

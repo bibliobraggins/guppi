@@ -43,6 +43,14 @@ defmodule Guppi.RegistrationHandler do
     })
   end
 
+  defp schedule_registration(timer) when is_integer(timer) do
+    :timer.send_interval(timer, :register)
+  end
+
+  defp send_register(agent) do
+    Process.send(agent, :register, [])
+  end
+
   @impl true
   def init(state) do
     schedule_registration(state.timer)
@@ -84,14 +92,6 @@ defmodule Guppi.RegistrationHandler do
 
   @impl true
   def terminate(_, _) do
-    Logger.warn("WHY DID MY GENSERVER STOP")
-  end
-
-  defp schedule_registration(timer) when is_integer(timer) do
-    :timer.send_interval(timer, :register)
-  end
-
-  defp send_register(agent) do
-    Process.send(agent, :register, [])
+    Logger.warn("WHY DID MY Registration handler STOP")
   end
 end

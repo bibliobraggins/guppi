@@ -5,6 +5,7 @@ defmodule Guppi.Agent do
 
   alias Guppi.Requests, as: Requests
   alias Guppi.RegistrationHandler, as: RegistrationHandler
+  alias Guppi.BlfHandler, as: BlfHandler
 
   alias Sippet.Message, as: Message
   alias Sippet.Message.RequestLine, as: RequestLine
@@ -27,9 +28,6 @@ defmodule Guppi.Agent do
   def start_link(account: account, transport: transport) do
     name = String.to_atom(account.uri.userinfo)
 
-    children = setup_children(name, account)
-    |> IO.inspect()
-
     # start the SIP agent
     GenServer.start_link(
       __MODULE__,
@@ -45,52 +43,22 @@ defmodule Guppi.Agent do
     )
   end
 
-  defp setup_children(name, account) do
-    reg_worker =
-      if account.register == true do
-        reg_spec(name, account)
-      end
-
-    blf_workers =
-      case length(account.blf_uri_list) > 0 do
-        true ->
-          Enum.into(account.blf_uri_list, [], fn uri -> Sippet.URI.parse!(uri) |> blf_spec(name, account) end)
-        false ->
-          nil
-      end
-
-    IO.inspect [reg_worker | blf_workers]
-
-  end
-
   defp reg_spec(name, account) do
-    %{
-      id: RegistrationHandler,
-      start: {
-        RegistrationHandler,
-        :start_link,
-        [[
-          agent: name,
-          timer: account.registration_timer,
-          retries: account.retries
-        ]]
-      }
+    {
+      RegistrationHandler,
+      agent: name,
+      timer: account.registration_timer,
+      retries: account.retries
     }
   end
 
   defp blf_spec(blf_uri, name, account) do
-    %{
-      id: BlfHandler,
-      start: {
-        BlfHandler,
-        :start_link,
-        [[
-          agent: name,
-          blf_uri: blf_uri,
-          timer: account.registration_timer,
-          retries: account.retries
-        ]]
-      }
+    {
+      BlfHandler,
+      agent: name,
+      blf_uri: blf_uri,
+      timer: account.registration_timer,
+      retries: account.retries
     }
   end
 
@@ -101,25 +69,37 @@ defmodule Guppi.Agent do
           optional(any) => any
         }) :: {:ok, map}
   def init(agent) do
-    children = [
-      %{
-        id: RegistrationHandler,
-        start: {
-          RegistrationHandler,
-          :start_link,
-          [[
-            agent: agent.name,
-            cseq: 0,
-            timer: agent.account.registration_timer,
-            retries: agent.account.retries
-          ]]
-        }
-      },
+    children = []
 
 
-    ]
+    blf_workers =
+      case not is_nil(agent.account.blf_uri_list) and length(agent.account.blf_uri_list) > 0 do
+        true ->
+          Enum.into(
+            agent.account.blf_uri_list,
+            children,
+            fn uri -> blf_spec(uri, agent.name, agent.account)
+          end)
+          _ ->
+            []
+          end
 
-    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_all)
+    reg_worker =
+      case agent.account.register do
+        true ->
+          reg_spec(agent.name, agent.account)
+        _ -> []
+      end
+
+    children = List.flatten([reg_worker, blf_workers])
+
+    pid =
+      case Supervisor.start_link(children, strategy: :one_for_one) do
+        {:ok, pid} ->
+          pid
+        error ->
+          raise ArgumentError, "children were improperly configured, #{inspect(error)}"
+      end
 
     {:ok, Map.put_new(agent, :children, pid)}
   end
@@ -142,6 +122,15 @@ defmodule Guppi.Agent do
   @impl true
   def handle_info(:register, agent) do
     msg = Requests.message(:register, [account: agent.account, cseq: agent.cseq])
+
+    Sippet.send(agent.transport, msg)
+
+    {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
+  end
+
+  @impl true
+  def handle_info({:subscribe, blf_uri}, agent) do
+    msg = Requests.message(:subscribe, [account: agent.account, cseq: agent.cseq, blf_uri: blf_uri])
 
     Sippet.send(agent.transport, msg)
 

@@ -49,7 +49,7 @@ defmodule Guppi.AgentSupervisor do
       account: account, transport: transport
     }
 
-    DynamicSupervisor.start_child(__MODULE__, spec)
+    DynamicSupervisor.start_child(__MODULE__, spec) |> IO.inspect
   end
 
 end
