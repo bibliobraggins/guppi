@@ -17,6 +17,7 @@ defmodule Guppi.BlfHandler do
       case Keyword.fetch(opts, :blf_uri) do
         {:ok, nil} ->
           raise ArgumentError, "blf target not provided"
+
         {:ok, blf_uri} ->
           Sippet.URI.parse!(blf_uri)
       end
@@ -42,12 +43,14 @@ defmodule Guppi.BlfHandler do
     Logger.log(:debug, "Starting Presence Handler for user: #{agent}")
 
     GenServer.start_link(
-      __MODULE__, %{
+      __MODULE__,
+      %{
         agent: agent,
         blf_uri: blf_uri,
         timer: timer,
         retries: retries
-      })
+      }
+    )
   end
 
   defp schedule_subscribe(timer) when is_integer(timer) do

@@ -24,14 +24,19 @@ defmodule Guppi.Requests do
         ],
         from:
           {opts[:account].display_name,
-           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"),
-           %{"tag" => Message.create_tag()}},
+           URI.parse!(
+             "#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"
+           ), %{"tag" => Message.create_tag()}},
         to:
           {opts[:account].display_name,
-           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
+           URI.parse!(
+             "#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"
+           ), %{}},
         contact:
           {opts[:account].display_name,
-           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
+           URI.parse!(
+             "#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"
+           ), %{}},
         expires: opts[:account].registration_timer,
         max_forwards: opts[:account].max_forwards,
         cseq: {opts[:cseq], :register},
@@ -43,14 +48,20 @@ defmodule Guppi.Requests do
 
   def ack(opts) when is_list(opts) do
     %Message{
-      start_line: RequestLine.new(:ack, "#{opts[:call].from.uri.scheme}:#{opts[:call].from.uri.host}"),
+      start_line:
+        RequestLine.new(:ack, "#{opts[:call].from.uri.scheme}:#{opts[:call].from.uri.host}"),
       headers: %{
         via: [
-          {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port}, %{"branch" => opts[:call].via.branch}}
+          {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
+           %{"branch" => opts[:call].via.branch}}
         ],
-        from: {"#{opts[:account].display_name}", opts[:call].to.uri, %{"tag" => Message.create_tag()}},
-        to: {opts[:account].display_name,
-           URI.parse!("#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"), %{}},
+        from:
+          {"#{opts[:account].display_name}", opts[:call].to.uri, %{"tag" => Message.create_tag()}},
+        to:
+          {opts[:account].display_name,
+           URI.parse!(
+             "#{opts[:account].uri.scheme}:#{opts[:account].uri.userinfo}@#{opts[:account].ip}"
+           ), %{}},
         contact: contact(opts[:account]),
         expires: opts[:account].refresh_timer,
         max_forwards: opts[:account].max_forwards,
@@ -70,7 +81,8 @@ defmodule Guppi.Requests do
           {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
            %{"branch" => Message.create_branch()}}
         ],
-        from: {"#{opts[:account].display_name}", opts[:blf_uri], %{"tag" => Message.create_tag()}},
+        from:
+          {"#{opts[:account].display_name}", opts[:blf_uri], %{"tag" => Message.create_tag()}},
         to: {opts[:blf_uri].userinfo, opts[:blf_uri], %{}},
         contact: contact(opts[:account]),
         event: "dialog",
@@ -82,13 +94,15 @@ defmodule Guppi.Requests do
         call_id: "#{opts[:blf_uri].authority}_#{opts[:cseq]}"
       }
     }
+
     inspect(subscribe |> to_string())
 
     subscribe
   end
 
   def contact(account) do
-    {"#{account.display_name}", URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
+    {"#{account.display_name}",
+     URI.parse!("#{account.uri.scheme}:#{account.uri.userinfo}@#{account.ip}"), %{}}
   end
 
   # updates cseq, via, and from headers for a given request.

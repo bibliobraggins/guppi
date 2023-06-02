@@ -55,15 +55,17 @@ defmodule Guppi.Core do
   def receive_response(
         %Message{start_line: %StatusLine{status_code: status_code}} = incoming_response,
         _client_key
-      ) when status_code in 400..499 do
-        Logger.info("Received: \n#{to_string(incoming_response)}")
+      )
+      when status_code in 400..499 do
+    Logger.info("Received: \n#{to_string(incoming_response)}")
 
-        case status_code do
-          status_code when status_code in [401,407] ->
-            send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})
-          423 ->
-            :ok
-        end
+    case status_code do
+      status_code when status_code in [401, 407] ->
+        send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})
+
+      423 ->
+        :ok
+    end
   end
 
   @impl true

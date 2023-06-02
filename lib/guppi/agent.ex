@@ -46,19 +46,14 @@ defmodule Guppi.Agent do
   defp reg_spec(name, account) do
     {
       RegistrationHandler,
-      agent: name,
-      timer: account.registration_timer,
-      retries: account.retries
+      agent: name, timer: account.registration_timer, retries: account.retries
     }
   end
 
   defp blf_spec(blf_uri, name, account) do
     {
       BlfHandler,
-      agent: name,
-      blf_uri: blf_uri,
-      timer: account.registration_timer,
-      retries: account.retries
+      agent: name, blf_uri: blf_uri, timer: account.registration_timer, retries: account.retries
     }
   end
 
@@ -71,24 +66,26 @@ defmodule Guppi.Agent do
   def init(agent) do
     children = []
 
-
     blf_workers =
       case not is_nil(agent.account.blf_uri_list) and length(agent.account.blf_uri_list) > 0 do
         true ->
           Enum.into(
             agent.account.blf_uri_list,
             children,
-            fn uri -> blf_spec(uri, agent.name, agent.account)
-          end)
-          _ ->
-            []
-          end
+            fn uri -> blf_spec(uri, agent.name, agent.account) end
+          )
+
+        _ ->
+          []
+      end
 
     reg_worker =
       case agent.account.register do
         true ->
           reg_spec(agent.name, agent.account)
-        _ -> []
+
+        _ ->
+          []
       end
 
     children = List.flatten([reg_worker, blf_workers])
@@ -97,6 +94,7 @@ defmodule Guppi.Agent do
       case Supervisor.start_link(children, strategy: :one_for_one) do
         {:ok, pid} ->
           pid
+
         error ->
           raise ArgumentError, "children were improperly configured, #{inspect(error)}"
       end
@@ -121,7 +119,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_info(:register, agent) do
-    msg = Requests.message(:register, [account: agent.account, cseq: agent.cseq])
+    msg = Requests.message(:register, account: agent.account, cseq: agent.cseq)
 
     Sippet.send(agent.transport, msg)
 
@@ -130,7 +128,7 @@ defmodule Guppi.Agent do
 
   @impl true
   def handle_info({:subscribe, blf_uri}, agent) do
-    msg = Requests.message(:subscribe, [account: agent.account, cseq: agent.cseq, blf_uri: blf_uri])
+    msg = Requests.message(:subscribe, account: agent.account, cseq: agent.cseq, blf_uri: blf_uri)
 
     Sippet.send(agent.transport, msg)
 
@@ -143,7 +141,10 @@ defmodule Guppi.Agent do
   end
 
   @impl true
-  def handle_cast({:invite, request = %Message{headers: %{cseq: {cseq, :invite}}}, server_key}, agent) do
+  def handle_cast(
+        {:invite, request = %Message{headers: %{cseq: {cseq, :invite}}}, server_key},
+        agent
+      ) do
     Logger.debug("#{server_key}\n#{Message.to_iodata(request)}")
 
     # sdp_string = to_string(Guppi.Media.fake_sdp())
@@ -182,7 +183,12 @@ defmodule Guppi.Agent do
 
         Sippet.send(
           agent.transport,
-          Guppi.Requests.message(request.start_line.method, [account: agent.account, cseq: cseq, call: call, offer: to_string(sdp_offer)])
+          Guppi.Requests.message(request.start_line.method,
+            account: agent.account,
+            cseq: cseq,
+            call: call,
+            offer: to_string(sdp_offer)
+          )
         )
 
         {:noreply, Map.replace(agent, :cseq, agent.cseq + 1)}
@@ -276,7 +282,7 @@ defmodule Guppi.Agent do
           | %{:account => any, :transport => atom, optional(any) => any}
         ) :: :ok | {:error, any}
   def authenticate(challenge = %Message{headers: %{cseq: {cseq, method}}}, agent) do
-    request = Requests.message(method, [account: agent.account, cseq: cseq])
+    request = Requests.message(method, account: agent.account, cseq: cseq)
 
     {:ok, auth_req} =
       DigestAuth.make_request(
@@ -303,6 +309,4 @@ defmodule Guppi.Agent do
 
     map
   end
-
-
 end
