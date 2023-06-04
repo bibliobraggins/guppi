@@ -87,7 +87,6 @@ defmodule Guppi.Requests do
           {"#{opts[:account].display_name}", blf_uri, %{"tag" => Message.create_tag()}},
         to: {"", blf_uri, %{}},
         contact: contact(opts[:account]),
-        event: "presence",
         accept: "application/dialog-info+xml",
         expires: opts[:account].subscription_timer,
         max_forwards: opts[:account].max_forwards,

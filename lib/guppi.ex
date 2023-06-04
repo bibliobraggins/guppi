@@ -72,4 +72,5 @@ defmodule Guppi do
   def sip_stack(port) when is_integer(port) and port > 0 and port < 65536 do
     Integer.to_string(port) |> String.to_atom()
   end
+
 end
