@@ -3,6 +3,15 @@ defmodule Guppi.RegistrationHandler do
 
   require Logger
 
+  def child_spec(name, account) do
+    {
+      __MODULE__,
+      agent: name,
+      timer: account.registration_timer,
+      retries: account.retries
+    }
+  end
+
   @spec start_link(keyword) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(opts) do
     agent =

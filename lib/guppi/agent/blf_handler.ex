@@ -3,6 +3,16 @@ defmodule Guppi.BlfHandler do
 
   require Logger
 
+  def child_spec(name, account, blf_uri) do
+    {
+      __MODULE__,
+      agent: name,
+      timer: account.subscription_timer,
+      retries: account.retries,
+      blf_uri: blf_uri
+    }
+  end
+
   def start_link(opts) do
     agent =
       case Keyword.fetch(opts, :agent) do

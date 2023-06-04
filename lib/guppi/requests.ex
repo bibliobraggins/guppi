@@ -74,28 +74,28 @@ defmodule Guppi.Requests do
   end
 
   def subscribe(opts) when is_list(opts) do
+    blf_uri = opts[:blf_uri]
+
     subscribe = %Message{
-      start_line: RequestLine.new(:subscribe, opts[:blf_uri]),
+      start_line: RequestLine.new(:subscribe, blf_uri),
       headers: %{
         via: [
           {{2, 0}, :udp, {"#{opts[:account].ip}", opts[:account].uri.port},
            %{"branch" => Message.create_branch()}}
         ],
         from:
-          {"#{opts[:account].display_name}", opts[:blf_uri], %{"tag" => Message.create_tag()}},
-        to: {opts[:blf_uri].userinfo, opts[:blf_uri], %{}},
+          {"#{opts[:account].display_name}", blf_uri, %{"tag" => Message.create_tag()}},
+        to: {"", blf_uri, %{}},
         contact: contact(opts[:account]),
-        event: "dialog",
+        event: "presence",
         accept: "application/dialog-info+xml",
         expires: opts[:account].subscription_timer,
         max_forwards: opts[:account].max_forwards,
         cseq: {opts[:cseq], :subscribe},
         user_agent: "#{opts[:account].user_agent}",
-        call_id: "#{opts[:blf_uri].authority}_#{opts[:cseq]}"
+        call_id: "#{blf_uri.authority}_#{opts[:cseq]}"
       }
     }
-
-    inspect(subscribe |> to_string())
 
     subscribe
   end

@@ -4,7 +4,7 @@ defmodule Guppi.Agent do
   require Logger
 
   alias Guppi.Requests, as: Requests
-  alias Guppi.RegistrationHandler, as: RegistrationHandler
+  alias Guppi.RegistrationHandler, as: RegHandler
   alias Guppi.BlfHandler, as: BlfHandler
 
   alias Sippet.Message, as: Message
@@ -20,11 +20,6 @@ defmodule Guppi.Agent do
     Once a Call is constructed, the Call is then able to start it's media endpoints via the Media Module
   """
 
-  @spec start_link([
-          {:account, atom | %{:register => boolean, :uri => atom | map, optional(any) => any}}
-          | {:transport, any},
-          ...
-        ]) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(account: account, transport: transport) do
     name = String.to_atom(account.uri.userinfo)
 
@@ -43,26 +38,7 @@ defmodule Guppi.Agent do
     )
   end
 
-  defp reg_spec(name, account) do
-    {
-      RegistrationHandler,
-      agent: name, timer: account.registration_timer, retries: account.retries
-    }
-  end
-
-  defp blf_spec(blf_uri, name, account) do
-    {
-      BlfHandler,
-      agent: name, blf_uri: blf_uri, timer: account.registration_timer, retries: account.retries
-    }
-  end
-
   @impl true
-  @spec init(%{
-          :account => atom | %{:registration_timer => any, :retries => any, optional(any) => any},
-          :name => any,
-          optional(any) => any
-        }) :: {:ok, map}
   def init(agent) do
     children = []
 
@@ -72,7 +48,7 @@ defmodule Guppi.Agent do
           Enum.into(
             agent.account.blf_uri_list,
             children,
-            fn uri -> blf_spec(uri, agent.name, agent.account) end
+            fn uri -> BlfHandler.child_spec(agent.name, agent.account, uri) end
           )
 
         _ ->
@@ -82,7 +58,7 @@ defmodule Guppi.Agent do
     reg_worker =
       case agent.account.register do
         true ->
-          reg_spec(agent.name, agent.account)
+          RegHandler.child_spec(agent.name, agent.account)
 
         _ ->
           []
