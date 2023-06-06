@@ -17,21 +17,26 @@ example configuration:
   [
     {
       "register": true,
-      "uri":"sip:username@sip_provider.com",
-      "sip_user":"username",
-      "sip_password":"**secret**",
-      "transport": "5060"
-      "realm":"sip_provider.com",
+      "display_name":"4600",
+      "uri":"sip:user@sip_provisder.com",
+      "sip_user":"user",
+      "sip_password":"**password**",
+      "ip": "0.0.0.0",
+      "user_agent": "_my_user_agent_string",
+      "transport": (_one of the transport ports defined below_),
+      "max_forwards":70,
+      "resync_timer":3600,
+      "registration_timer":3600,
+      "subscribe_timer":3600
     }
   ],
   "transports": [
     {
       "ip": "0.0.0.0",
-      "port": 5060,
+      "port":port_number,
       "outbound_proxy":{
-        "dns":"A",
-        "host":"proxy.sip_provider.com",
-        "port":5060
+        "type":"NAPTR",
+        "domain":"my_domain"
       }
     }
   ]
