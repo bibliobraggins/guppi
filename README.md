@@ -13,30 +13,37 @@ Current Status:
 example configuration:
 ```
 {
-  "accounts": 
-  [
-    {
-      "register": true,
-      "uri":"sip:username@sip_provider.com",
-      "sip_user":"username",
-      "sip_password":"**secret**",
-      "transport": "5060"
-      "realm":"sip_provider.com",
-    }
-  ],
-  "transports": [
-    {
-      "ip": "0.0.0.0",
-      "port": 5060,
-      "outbound_proxy":{
-        "dns":"A",
-        "host":"proxy.sip_provider.com",
-        "port":5060
+    "accounts": 
+    [
+      {
+        "register": true,
+        "display_name":"4600",
+        "uri":"sip:user@sip_provisder.com",
+        "sip_user":"user",
+        "sip_password":"**password**",
+        "ip": "0.0.0.0",
+        "user_agent": "_my_user_agent_string",
+        "transport": (_one of the transport ports defined below_),
+        "max_forwards":70,
+        "resync_timer":3600,
+        "registration_timer":3600,
+        "subscribe_timer":3600
       }
-    }
-  ]
-}
+    ],
+    "transports": [
+      {
+        "ip": "0.0.0.0",
+        "port":port_number,
+        "outbound_proxy":{
+          "type":"NAPTR",
+          "domain":"my_domain"
+        }
+      }
+    ]
+  }
 ```
+Note: naptr resolution exists right now, but only UDP transport is provided until further development
+
 Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
 
 To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
