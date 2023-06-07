@@ -155,7 +155,7 @@ defmodule Guppi.Transport do
     Logger.info("Sending: \n#{to_string(message)}")
 
     case message do
-      %Message{start_line: %RequestLine{method: :register}} ->
+      %Message{start_line: %RequestLine{}} ->
         Logger.debug([
           "sending Request to #{stringify_hostport(Enum.at(state.proxy, state.idx).target, Enum.at(state.proxy, state.idx).port)}/udp",
           ", #{inspect(key)}"
