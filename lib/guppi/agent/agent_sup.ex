@@ -24,10 +24,22 @@ defmodule Guppi.AgentSupervisor do
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
 
-  def start_transport(name, transport) do
+  def start_transport(name, opts) do
+    # TODO: move to Transport Supervisor as child of this module - needs to dynamically switch for NAPTR to work.
+    transport_mod =
+      case opts.outbound_proxy.scheme do
+        :tls ->
+          Guppi.TlsTransport
+        :tcp ->
+            IO.puts("falling back to UDP, no TCP handler is available now")
+          Guppi.UdpTransport
+        :udp ->
+          Guppi.UdpTransport
+      end
+
     spec = {
-      Guppi.Transport,
-      name: name, address: transport.ip, port: transport.port, proxy: transport.outbound_proxy
+      transport_mod,
+      name: name, address: opts.ip, port: opts.port, proxy: opts.outbound_proxy
     }
 
     DynamicSupervisor.start_child(__MODULE__, spec)

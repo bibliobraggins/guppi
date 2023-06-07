@@ -28,7 +28,7 @@ defmodule Guppi.MixProject do
       {:jason, "~> 1.4"},
       {:dns, "~> 2.4"},
       {:ex_sdp, "~> 0.11.0"},
-      {:bunch, "~> 1.5.0"}
+      {:thousand_island, "~> 0.6.7"},
       # {:socket, "~> 0.3.13"},
       # {:poolboy, "~> 1.5.1"},
       # {:phone, "~> 0.5.6"},

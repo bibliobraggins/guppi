@@ -1,4 +1,4 @@
-defmodule Guppi.Transport do
+defmodule Guppi.UdpTransport do
   @moduledoc """
   Implements a transport.
 
@@ -169,25 +169,6 @@ defmodule Guppi.Transport do
           {:error, reason} ->
             Logger.warn(
               "udp transport error for #{Enum.at(state.proxy, state.idx).target}:#{Enum.at(state.proxy, state.idx).port}: #{inspect(reason)}"
-            )
-
-            if key != nil do
-              Sippet.Router.receive_transport_error(state.sippet, key, reason)
-            end
-        end
-
-      %Message{start_line: %RequestLine{}} ->
-        Logger.debug([
-          "sending Request to #{stringify_hostport(to_host, to_port)}/udp"
-        ])
-
-        with {:ok, to_ip} <- resolve_name(to_host, :inet),
-             :ok <- :gen_udp.send(state.socket, {to_ip, to_port}, io_msg) do
-          :ok
-        else
-          {:error, reason} ->
-            Logger.warn(
-              "udp transport error for #{stringify_hostport(to_host, to_port)}: #{inspect(reason)}"
             )
 
             if key != nil do

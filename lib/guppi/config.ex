@@ -139,7 +139,7 @@ defmodule Guppi.Config.Transport do
         case Map.has_key?(record, :port) do
           true ->
             # As per RFC3261, UDP should be considered the default, over port 5060
-            %{transport_scheme: :udp, target: record.domain, port: record.port}
+            %{scheme: set_transport_scheme(record.scheme), target: record.domain, port: record.port}
 
           false ->
             raise ArgumentError, "port number is required when using an A record for proxy"
