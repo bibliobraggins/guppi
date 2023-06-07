@@ -38,10 +38,11 @@ example configuration:
         "type":"NAPTR",
         "domain":"my_domain"
       }
-    }
-  ]
-}
+    ]
+  }
 ```
+Note: naptr resolution exists right now, but only UDP transport is provided until further development
+
 Use ip: 0.0.0.0 when you do not care what address/interface to listen on.
 
 To start Guppi, Start it manually via your supervision tree, or add it to your mix applications to start it up automatically.
