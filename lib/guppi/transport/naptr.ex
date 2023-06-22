@@ -8,26 +8,11 @@ defmodule Guppi.NaptrTransport do
   require Logger
 
   @moduledoc """
-    The NaptrTransport is a failover capable transport for Sippet, basically. provide
-    resolved via NAPTR, SRV, or A records provided via an initial options KeywordList:
+    This module is a naive attempt to abstract over an active socket,
+    meaning that this process can only receive a single SIP message
+    at a time before a new request can be made.
 
-      [
-        port: local_port,
-
-        proxy:
-          [
-            type: "NAPTR" || "SRV" || "A",
-            record: "sip_provider_domain.net",
-            port: nil || 0 || 5060,
-            transport: nil || :udp || :tls || :tcp
-            | rest_of_proxies
-          ]
-      ]
-
-    - If the port is left nil, we send to port 5060
-    - If the transport is left nil, we spawn with :udp
-    - If no proxy is provided, we send messages to
-      the declared recipient in the start line.
+    This may need to be broken out into several modules in the future
   """
 
   @type protocol :: :udp | :tcp | :tls
