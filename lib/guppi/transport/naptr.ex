@@ -96,11 +96,8 @@ defmodule Guppi.NaptrTransport do
 
     proxy =
       case Keyword.fetch(options, :proxy) do
-        {:ok, proxy_record} when is_list(proxy_record) ->
-          proxy_record
-
         {:ok, %{target: _, scheme: _, port: _} = proxy_record} ->
-          [proxy_record]
+          proxy_record
 
         :error ->
           raise ArgumentError, "This Transport requires an proxy record"
