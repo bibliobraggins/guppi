@@ -16,7 +16,8 @@ defmodule Guppi.MixProject do
     [
       extra_applications: [
         :logger,
-        :crypto
+        :crypto,
+        :ssl
       ]
     ]
   end
