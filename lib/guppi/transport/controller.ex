@@ -1,6 +1,16 @@
 defmodule Guppi.TransportController do
   use GenServer
 
+  @moduledoc """
+    This module spawns a Transport GenServer and manages it.
+
+    TODO: should have handle_info() callbacks for when child
+    dies. when the child dies, we increment the proxy records
+    index by one, and reinitialize the child process with the
+    next set of socket options. The child should hold all
+    logic for handling and setting up the connection.
+  """
+
   def start_link(opts) do
     proxy_list =
       case Keyword.fetch(opts, :proxy) do
