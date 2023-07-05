@@ -63,7 +63,7 @@ defmodule Guppi.Core do
       status_code when status_code in [401, 407] ->
         send(route_agent(incoming_response.headers.to), {:challenge, incoming_response})
       _othr ->
-        Logger.warn("transatcion #{client_key} failed :: #{status_code}")
+        Logger.warning("transatcion #{client_key} failed :: #{status_code}")
     end
   end
 
@@ -87,7 +87,7 @@ defmodule Guppi.Core do
 
   @impl true
   def receive_error(error_reason, client_or_server_key) do
-    Logger.warn("Received Error: #{inspect(error_reason)} :: #{client_or_server_key}")
+    Logger.warning("Received Error: #{inspect(error_reason)} :: #{client_or_server_key}")
   end
 
   defp route_agent({_display_name, uri, _tag}), do: route_agent(uri)

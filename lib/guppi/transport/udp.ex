@@ -207,11 +207,6 @@ defmodule Guppi.UdpTransport do
     :gen_udp.close(socket)
   end
 
-  @spec resolve_name(any, :inet | :inet6 | :local) ::
-          {:error, :eafnosupport | :einval | :nxdomain}
-          | {:ok,
-             {byte, byte, byte, byte}
-             | {char, char, char, char, char, char, char, char}}
   def resolve_name(host, family) do
     to_charlist(host)
     |> :inet.getaddr(family)
